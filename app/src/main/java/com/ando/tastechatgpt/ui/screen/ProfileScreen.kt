@@ -39,7 +39,6 @@ import com.skydoves.cloudy.Cloudy
 @Composable
 fun ProfileScreen(viewModel: ProfileViewModel = hiltViewModel(), backAction: () -> Unit) {
     val uiState = viewModel.screenUiState
-    val user = uiState.user
     val tempUser = uiState.tempUser
     val message = uiState.message
     var dialogState by remember { mutableStateOf(false) }

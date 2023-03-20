@@ -2,6 +2,7 @@ package com.ando.tastechatgpt.ext
 
 import android.content.Context
 import android.text.format.DateUtils
+import android.util.Log
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.navigation.NavHostController
@@ -45,9 +46,13 @@ fun LocalDateTime.formatByNow(context: Context): String {
     return DateUtils.formatDateTime(context, epochMill, flags)
 }
 
-fun NavHostController.navigateSingleTop(route: String) =
+fun NavHostController.navigateSingleTop(route: String){
+    Log.i(TAG,"navigateSingleTop: route=$route")
     navigate(route = route) {
         launchSingleTop = true
         restoreState = true
     }
+}
+
+private const val TAG = "Extend"
 

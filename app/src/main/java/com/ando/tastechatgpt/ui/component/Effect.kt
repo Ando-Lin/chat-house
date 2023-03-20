@@ -115,9 +115,9 @@ class BreathingLightState internal constructor(
                 },
                 restore = {
                     BreathingLightState(
-                        it[state] as State<Float>,
+                        mutableStateOf(it[state] as Float),
                         it[motion] as Motion,
-                        it[runState] as MutableState<Boolean>,
+                        mutableStateOf(it[runState] as Boolean),
                         it[finalValue] as Float
                     )
                 }

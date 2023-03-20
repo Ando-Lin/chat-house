@@ -36,31 +36,17 @@ fun TDrawer(
         content()
         return
     }
-    val configuration = LocalConfiguration.current
-    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val drawerShape = RoundedCornerShape(10.dp)
-    if (isLandscape) {
-        PermanentNavigationDrawer(
-            drawerContent = {
-                PermanentDrawerSheet(drawerShape = drawerShape, modifier = modifier.fillMaxWidth(0.3f)) {
-                    drawerContent()
-                    TDrawerContent(navigateAction = navigateAction)
-                }
-            },
-            content = content
-        )
-    } else {
-        ModalNavigationDrawer(
-            drawerState = drawerState,
-            drawerContent = {
-                ModalDrawerSheet(drawerShape = drawerShape, modifier = modifier.fillMaxWidth(0.65f)) {
-                    drawerContent()
-                    TDrawerContent(navigateAction = navigateAction)
-                }
-            },
-            content = content
-        )
-    }
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet(drawerShape = drawerShape, modifier = modifier.requiredWidth(210.dp)) {
+                drawerContent()
+                TDrawerContent(navigateAction = navigateAction)
+            }
+        },
+        content = content
+    )
 
 }
 
@@ -70,7 +56,6 @@ fun ColumnScope.TDrawerContent(
     modifier: Modifier = Modifier,
     navigateAction: (route: String) -> Unit,
 ) {
-
     Spacer(modifier = Modifier.weight(1f))
     Divider(Modifier.padding(horizontal = 20.dp))
     NavigationDrawerItem(

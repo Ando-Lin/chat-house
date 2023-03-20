@@ -23,7 +23,6 @@ class RoleListScreenViewModel @Inject constructor(
     var screenUiState: RoleListScreenUiState by mutableStateOf(
         RoleListScreenUiState(getPagingDataFlow())
     )
-
     private fun getPagingDataFlow() =
         Pager(
             config = PagingConfig(pageSize = 20),

@@ -3,7 +3,6 @@ package com.ando.tastechatgpt.ui.screen
 import android.util.Log
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -39,6 +38,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.paging.LoadState
+import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.items
@@ -52,10 +52,11 @@ import com.ando.tastechatgpt.ext.withCondition
 import com.ando.tastechatgpt.model.OpenAIGPT3d5Model
 import com.ando.tastechatgpt.ui.component.*
 import com.ando.tastechatgpt.ui.screen.state.ChatBottomBarUiState
-import com.ando.tastechatgpt.ui.screen.state.ChatEntryUiState
+import com.ando.tastechatgpt.ui.screen.state.ChatMessageUiState
 import com.ando.tastechatgpt.ui.screen.state.ChatScreenUiState
 import com.ando.tastechatgpt.ui.screen.state.ChatViewModel
 import com.ando.tastechatgpt.ui.theme.MessageBubbleShape
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.LocalDateTime
@@ -72,7 +73,7 @@ fun ChatScreen(
     var dialogForOpVisible by remember { mutableStateOf(false) }
     var dialogForInputVisible by rememberSaveable { mutableStateOf(false) }
     var longPressedMessageUiState by remember {
-        mutableStateOf<ChatEntryUiState?>(null)
+        mutableStateOf<ChatMessageUiState?>(null)
     }
     val hapticFeedback = LocalHapticFeedback.current
     val screenUiState = vm.screenUiState
@@ -80,7 +81,9 @@ fun ChatScreen(
     val currentModel = currentModelState.value ?: OpenAIGPT3d5Model.modelName
     val scope = rememberCoroutineScope()
     val clipboardManager = LocalClipboardManager.current
-    val lazyPagingItems = screenUiState.flowPagingData.collectAsLazyPagingItems()
+    val lazyPagingItems = screenUiState.flowPagingData
+        .collectAsState(initial = flowOf(PagingData.empty())).value
+        .collectAsLazyPagingItems()
     val interactionSource = remember {
         MutableInteractionSource()
     }
@@ -171,21 +174,22 @@ private fun ScreenContent(
     modifier: Modifier = Modifier,
     screenUiState: ChatScreenUiState,
     bottomBarUiState: ChatBottomBarUiState,
-    lazyPagingItems: LazyPagingItems<ChatEntryUiState>,
+    lazyPagingItems: LazyPagingItems<ChatMessageUiState>,
     currentModel: String,
     interactionSource: MutableInteractionSource,
     onClickMenu: () -> Unit,
     onChangingText: (String) -> Unit,
     sendMessageRequest: (modelName: String, msg: String, previousMsgTime: LocalDateTime?) -> Unit,
     onUpdateCurrentModel: (String) -> Unit,
-    onLongClick: (ChatEntryUiState) -> Unit,
+    onLongClick: (ChatMessageUiState) -> Unit,
     onClickAvatar: (Int) -> Unit,
 ) {
+    val title = screenUiState.titleFlow.collectAsState("").value
     Scaffold(
         modifier = modifier,
         topBar = {
             TopBar(
-                title = screenUiState.title,
+                title = title,
                 onClickMenu = onClickMenu,
                 availableList = screenUiState.availableModels,
                 selected = currentModel,
@@ -410,8 +414,8 @@ private fun BottomBar(
 fun ChatArea(
     modifier: Modifier = Modifier,
     myId: Int,
-    pagingItems: LazyPagingItems<ChatEntryUiState>,
-    onLongClick: (uiState: ChatEntryUiState) -> Unit,
+    pagingItems: LazyPagingItems<ChatMessageUiState>,
+    onLongClick: (uiState: ChatMessageUiState) -> Unit,
     onClickAvatar: (uid: Int) -> Unit
 ) {
     val lazyColumnState = rememberLazyListState()
@@ -444,10 +448,10 @@ fun ChatArea(
         modifier = modifier
     ) {
         val itemModifier = Modifier.fillMaxWidth()
-        items(items = pagingItems, key = { value: ChatEntryUiState -> value.id }) { item ->
+        items(items = pagingItems, key = { value: ChatMessageUiState -> value.id }) { item ->
             if (item != null) {
-                Message(
-                    chatEntryUiState = item,
+                SimpleMessage(
+                    messageUiState = item,
                     isMe = item.uid == myId,
                     modifier = itemModifier,
                     onLongClick = { onLongClick(item) },
@@ -455,41 +459,17 @@ fun ChatArea(
                 )
             } else {
                 //占位符
+
             }
         }
     }
-}
-
-@Composable
-fun Message(
-    modifier: Modifier = Modifier,
-    chatEntryUiState: ChatEntryUiState,
-    isMe: Boolean,
-    onLongClick: () -> Unit,
-    onClickAvatar: () -> Unit
-) {
-    val annotatedString = chatEntryUiState.text.toAnnotatedString()
-    SimpleMessage(
-        modifier = modifier,
-        avatar = chatEntryUiState.avatar,
-        content = annotatedString,
-        status = chatEntryUiState.status,
-        time = chatEntryUiState.timestamp,
-        showTime = Duration.ofSeconds(chatEntryUiState.secondDiff) > showTimeInterval,
-        isMe = isMe,
-        onLongClick = onLongClick,
-        onClickAvatar = onClickAvatar
-    )
 }
 
 
 @Composable
 fun SimpleMessage(
     modifier: Modifier = Modifier,
-    avatar: Any?,
-    content: AnnotatedString,
-    status: MessageStatus,
-    time: LocalDateTime,
+    messageUiState: ChatMessageUiState,
     showTime: Boolean = false,
     isMe: Boolean,
     onLongClick: () -> Unit,
@@ -514,7 +494,7 @@ fun SimpleMessage(
         bubbleColor = colorScheme.primary
         textColor = colorScheme.onPrimary
     }
-    if (status == MessageStatus.Failed){
+    if (messageUiState.status == MessageStatus.Failed){
         bubbleColor = colorScheme.error
     }
     Column(horizontalAlignment = alignment, modifier = modifier) {
@@ -526,7 +506,7 @@ fun SimpleMessage(
                     .padding(vertical = 5.dp)
             ) {
                 Text(
-                    text = time.formatByNow(LocalContext.current),
+                    text = messageUiState.timestamp.formatByNow(LocalContext.current),
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.align(Alignment.Center),
                     color = colorScheme.onSurfaceVariant
@@ -542,7 +522,7 @@ fun SimpleMessage(
             item {
                 //头像
                 AvatarImage(
-                    model = avatar,
+                    model = messageUiState.avatar,
                     contentDescription = null,
                     modifier = Modifier
                         .size(avatarSize)
@@ -558,16 +538,15 @@ fun SimpleMessage(
                         .background(color = Color.White)
                         .clickable(onClick = onClickAvatar)
                 )
-                //聊天气泡内容
                 Spacer(modifier = Modifier.width(10.dp))
+                //聊天气泡内容
                 BubbleText(
-                    text = content,
+                    text = messageUiState.text.toAnnotatedString(),
                     containerColor = bubbleColor,
                     textColor = textColor,
                     modifier = Modifier
-//                        .combinedClickable(onLongClick = onLongClick, onClick = onClick)
                         .withCondition(
-                            status == MessageStatus.Sending,
+                            messageUiState.status == MessageStatus.Sending,
                             Modifier.breathingLight(rememberBreathingLightState())
                         )
                         .sizeIn(
@@ -577,11 +556,6 @@ fun SimpleMessage(
                     onLongClick = onLongClick,
                     onClick = onClickAvatar
                 )
-//                //发送状态
-//                Spacer(modifier = Modifier.width(5.dp))
-//                Box(modifier = Modifier.size(statusIconSize)) {
-//                    status.ui()
-//                }
             }
         }
     }
@@ -679,13 +653,13 @@ private fun PreviewChatEntry() {
     Surface(
         color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth()
     ) {
-        SimpleMessage(avatar = R.drawable.avatar_user0,
-            content = " ".toAnnotatedString(),
-            status = MessageStatus.Failed,
-            time = LocalDateTime.now(),
-            isMe = false,
-            onLongClick = {},
-            onClickAvatar = {})
+//        SimpleMessage(avatar = R.drawable.avatar_user0,
+//            content = " ".toAnnotatedString(),
+//            status = MessageStatus.Failed,
+//            time = LocalDateTime.now(),
+//            isMe = false,
+//            onLongClick = {},
+//            onClickAvatar = {})
     }
 }
 

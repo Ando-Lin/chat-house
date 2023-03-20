@@ -12,8 +12,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.*
@@ -33,15 +31,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.items
-import androidx.paging.compose.itemsIndexed
-import com.ando.tastechatgpt.ChatScreenDestination
+import com.ando.tastechatgpt.ChatScreenTabDestination
 import com.ando.tastechatgpt.ProfileScreenDestination
 import com.ando.tastechatgpt.R
-import com.ando.tastechatgpt.constant.HUMAN_UID
 import com.ando.tastechatgpt.domain.pojo.User
 import com.ando.tastechatgpt.ui.component.AvatarImage
 import com.ando.tastechatgpt.ui.component.SimpleAlertDialog
@@ -56,7 +53,7 @@ import kotlinx.coroutines.launch
 fun RoleListScreen(
     drawerState: DrawerState,
     viewModel: RoleListScreenViewModel = hiltViewModel(),
-    navigateAction: (routeWithArg: String) -> Unit
+    navigationAction: (routeWithArg: String) -> Unit
 ) {
     val scope = rememberCoroutineScope()
     var popupVisible by remember {
@@ -75,6 +72,21 @@ fun RoleListScreen(
     val lazyPagingItems = uiState.pagingDataFlow.collectAsLazyPagingItems()
     val message = viewModel.screenUiState.message
     val hapticFeedback = LocalHapticFeedback.current
+    Log.i(TAG, "RoleListScreen: ")
+    when (lazyPagingItems.loadState.append) {
+        LoadState.Loading -> {
+            Log.i(TAG, "RoleListScreen: loadingState.Loading")
+        }
+        is LoadState.Error -> {
+            Log.i(TAG, "RoleListScreen: loadingState.Error")
+        }
+        else -> {   //没有加载时
+            //当查看最新消息时自动滚动最新消息
+            //如果页面停留在最新的前两项则自动滚动到最新的一项
+            Log.i(TAG, "RoleListScreen: loadingState=${lazyPagingItems.loadState}")
+        }
+    }
+
 
     LaunchedEffect(message) {
         if (message.isBlank()) return@LaunchedEffect
@@ -97,7 +109,7 @@ fun RoleListScreen(
             TopBar(
                 title = stringResource(id = R.string.role_list),
                 onClickMenu = { scope.launch { drawerState.open() } },
-                onCLickAdd = { navigateAction(ProfileScreenDestination.routeWithArg(0)) }
+                onCLickAdd = { navigationAction(ProfileScreenDestination.routeWithArg(0)) }
             )
         }
     ) { paddingValues ->
@@ -107,12 +119,12 @@ fun RoleListScreen(
                 .padding(paddingValues)
                 .fillMaxSize(),
             onClickRoleItem = {
-                navigateAction(
-                    ChatScreenDestination.routeWithArg(it)
+                navigationAction(
+                    ChatScreenTabDestination.routeWithArg(it)
                 )
             },
             onClickAvatar = {
-                navigateAction(
+                navigationAction(
                     ProfileScreenDestination.routeWithArg(it)
                 )
             },
@@ -140,7 +152,7 @@ fun RoleListScreen(
                             .then(modifier)
                             .clickable {
                                 popupVisible = false
-                                navigateAction(ProfileScreenDestination.routeWithArg(uid))
+                                navigationAction(ProfileScreenDestination.routeWithArg(uid))
                             }
                     )
                     if (uid == viewModel.screenUiState.myId) return@TPopup
@@ -173,7 +185,7 @@ private fun ScreenContent(
             .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape),
         contentPadding = PaddingValues(vertical = 5.dp)
     ) {
-        items(items = lazyPagingItems, key = User::id) {user ->
+        items(items = lazyPagingItems, key = {it.id}) {user ->
             val interactionSource = remember { MutableInteractionSource() }
             if (user != null) {
                 ListItem(
