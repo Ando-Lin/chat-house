@@ -3,12 +3,11 @@ package com.ando.tastechatgpt.ui.component
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -19,6 +18,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.LineBreak
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -30,12 +32,12 @@ fun TTextField(
     maxLines: Int = 1,
     showIndicator: Boolean = false,
     onTextChange: (String) -> Unit,
+    textStyle: TextStyle = TextStyle.Default,
     shape: Shape = RoundedCornerShape(10),
     interactionSource: MutableInteractionSource = remember {
         MutableInteractionSource()
     }
 ) {
-    val textStyle = MaterialTheme.typography.bodyLarge
     val colorScheme = MaterialTheme.colorScheme
     val density = LocalDensity.current
     BasicTextField(
@@ -44,16 +46,35 @@ fun TTextField(
         maxLines = maxLines,
         modifier = modifier
             .animateContentSize(),
-        textStyle = textStyle.copy(color = colorScheme.onSurface),
+        textStyle = textStyle.copy(lineBreak = LineBreak.Heading),
         cursorBrush = SolidColor(colorScheme.primary),
         interactionSource = interactionSource,
     ) { content ->
-        Box(
+//        Box(
+//            modifier = Modifier
+//                .background(
+//                    color = colorScheme.onSurface.copy(alpha = 0.1f),
+//                    shape = shape
+//                )
+
+//        ) {
+//            Box(modifier = Modifier
+//                .padding(12.dp)
+//                .align(Alignment.TopStart)) {
+//                content()
+//                if (text.isBlank()) {
+//                    Text(
+//                        text = tip,
+//                        style = textStyle,
+//                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+//                    )
+//                }
+//            }
+//        }
+        Surface(
+            color = colorScheme.onSurface.copy(alpha = 0.1f),
+            shape = shape,
             modifier = Modifier
-                .background(
-                    color = colorScheme.onSurface.copy(alpha = 0.1f),
-                    shape = shape
-                )
                 .drawBehind {
                     if (!showIndicator) return@drawBehind
                     val lineWidth = with(density) { 0.5.dp.toPx() }
@@ -65,7 +86,10 @@ fun TTextField(
                     )
                 }
         ) {
-            Box(modifier = Modifier.padding(12.dp).align(Alignment.TopStart)) {
+            Box(
+                modifier = Modifier
+                    .padding(12.dp)
+            ) {
                 content()
                 if (text.isBlank()) {
                     Text(

@@ -18,7 +18,7 @@
     <string name="name">名称</string>
     <string name="name_description">显示的名称</string>
     <string name="role">角色</string>
-    <string name="role_description">指定模型扮演的角色行为</string>
+    <string name="assign_model_play_role">指定模型扮演的角色行为</string>
     <string name="click_to_change_avatar">点击更换头像</string>
     <string name="role_list">角色列表</string>
     <string name="chat">聊天</string>
@@ -31,4 +31,12 @@
     <string name="ask_for_delete">确认是否删除该角色</string>
     <string name="navigation">导航</string>
     <string name="close">关闭</string>
+    <string name="role_description">角色描述</string>
+    <string name="reminder_mode">提醒模式</string>
+    <string name="role_guide">角色引导</string>
+    <string name="help">帮助</string>
+    <string name="preceding_guide_make_models_play_roles">前置引导语使模型扮演角色</string>
+    <string name="add_addtional_sentences_before_sending">发送前添加额外的引导</string>
+    <string name="role_settings">角色设置</string>
+    <string name="extra_settings">额外设置</string>
 </resources>

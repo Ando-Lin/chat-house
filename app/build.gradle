@@ -67,7 +67,7 @@ dependencies {
     implementation "androidx.compose.ui:ui:$compose_version"
     implementation "androidx.compose.ui:ui-tooling-preview:$compose_version"
     implementation "androidx.compose.material3:material3:$material3"
-    implementation "androidx.compose.foundation:foundation:$compose_version"
+    implementation "androidx.compose.foundation:foundation:1.4.0-beta02"
     implementation "androidx.compose.material:material-icons-extended:$compose_version"
     implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.6.0'
     testImplementation 'junit:junit:4.13.2'
@@ -84,9 +84,10 @@ dependencies {
     //模糊处理工具
     implementation "com.github.skydoves:cloudy:0.1.2"
 
-    //占位符
-    def placeholder_version  = "0.29.2-rc"
-    implementation "com.google.accompanist:accompanist-placeholder-material:$placeholder_version"
+    //accompanist组件
+//    def accompanist_version  = "0.29.2-rc"
+//    implementation "com.google.accompanist:accompanist-placeholder-material:$accompanist_version"
+//    implementation "com.google.accompanist:accompanist-flowlayout:$accompanist_version"
 
     //retrofit2
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'

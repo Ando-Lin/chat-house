@@ -1,13 +1,16 @@
 package com.ando.tastechatgpt.util
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
+import androidx.core.graphics.scale
 import androidx.core.net.toUri
+import com.skydoves.cloudy.internals.render.RenderScriptToolkit
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
-import java.time.Instant
 
 object Utils {
     fun copyFile(context: Context, sourceUri: Uri?, destFile: File): Uri?{
@@ -31,6 +34,25 @@ object Utils {
             inputStream?.close()
         }
         return newUri
+    }
+
+    fun blur(context:Context, uri: Uri?):Bitmap?{
+        uri?:return null
+        with(context.contentResolver.openInputStream(uri)) {
+            this ?: return@with
+            val bitmap = BitmapFactory.decodeStream(this)
+            val maxSide = 500
+            var width = bitmap.width
+            var height = bitmap.height
+            if (bitmap.width>500 || bitmap.height>500){
+                width =
+                    if (bitmap.width > bitmap.height) maxSide else maxSide * bitmap.width / bitmap.height
+                height = width * bitmap.height / bitmap.width
+            }
+            val downScale = bitmap.scale(width = width, height = height)
+            return RenderScriptToolkit.blur(downScale, 10)
+        }
+        return null
     }
 
     private const val TAG = "Utils"
