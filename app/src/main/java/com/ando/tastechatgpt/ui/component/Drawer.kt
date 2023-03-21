@@ -36,11 +36,11 @@ fun TDrawer(
         content()
         return
     }
-    val drawerShape = RoundedCornerShape(10.dp)
+    val drawerShape = RoundedCornerShape(7.dp)
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            ModalDrawerSheet(drawerShape = drawerShape, modifier = modifier.requiredWidth(210.dp)) {
+            ModalDrawerSheet(drawerShape = drawerShape, modifier = modifier.requiredWidth(260.dp)) {
                 drawerContent()
                 TDrawerContent(navigateAction = navigateAction)
             }
@@ -68,7 +68,7 @@ fun ColumnScope.TDrawerContent(
                 contentDescription = null
             )
         },
-        modifier = Modifier
+        modifier = modifier
             .padding(NavigationDrawerItemDefaults.ItemPadding)
             .padding(vertical = 10.dp)
     )

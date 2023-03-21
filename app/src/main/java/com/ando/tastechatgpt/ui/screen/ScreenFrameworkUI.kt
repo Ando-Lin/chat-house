@@ -58,11 +58,12 @@ fun ScreenFrameworkUI(
         drawerState = drawerState,
         drawerContent = {
             Text(
-                text = stringResource(R.string.navigation),
-                style = MaterialTheme.typography.titleLarge,
+                text = stringResource(R.string.app_name),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
-                    .padding(horizontal = 10.dp)
-                    .padding(top = 10.dp, bottom = 7.dp)
+                    .padding(vertical = 14.dp)
+                    .padding(NavigationDrawerItemDefaults.ItemPadding)
             )
             NavigationList(
                 visualTabDestinationList = visualTabDestinationList,
@@ -93,7 +94,6 @@ fun NavigationList(
                     text = stringResource(id = item.labelResId),
                 )
             },
-            shape = RectangleShape,
             selected = selected,
             onClick = {
                 scrollToPageRequest(index)
@@ -110,7 +110,7 @@ fun NavigationList(
                     tint = MaterialTheme.colorScheme.primary
                 )
             },
-            modifier = modifier
+            modifier = modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
         )
     }
 }
