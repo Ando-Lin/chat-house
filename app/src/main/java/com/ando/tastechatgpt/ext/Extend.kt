@@ -3,14 +3,15 @@ package com.ando.tastechatgpt.ext
 import android.content.Context
 import android.text.format.DateUtils
 import android.util.Log
+import androidx.compose.foundation.gestures.PressGestureScope
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.navigation.NavHostController
 import java.time.LocalDateTime
 import java.time.ZoneId
-import java.time.ZoneOffset
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
 import java.util.regex.Pattern
 
 
@@ -51,6 +52,24 @@ fun NavHostController.navigateSingleTop(route: String){
     navigate(route = route) {
         launchSingleTop = true
         restoreState = true
+    }
+}
+
+suspend fun PressGestureScope.withMutableInteractionSource(
+    offset: Offset,
+    interactionSource: MutableInteractionSource,
+    onRelease: (suspend ()->Unit)? = null,
+    onCancel: (suspend ()->Unit)? = null
+){
+    val press = PressInteraction.Press(offset)
+    interactionSource.emit(press)
+    val release = tryAwaitRelease()
+    if (release){
+        onRelease?.invoke()
+        interactionSource.emit(PressInteraction.Release(press))
+    }else{
+        onCancel?.invoke()
+        interactionSource.emit(PressInteraction.Cancel(press))
     }
 }
 

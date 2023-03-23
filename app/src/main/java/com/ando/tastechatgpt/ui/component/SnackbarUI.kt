@@ -13,8 +13,8 @@ object SnackbarUI {
         SnackbarHost(hostState = snackbarHostState) {
             Snackbar(
                 snackbarData = it,
-                contentColor = MaterialTheme.colorScheme.primary,
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+//                contentColor = MaterialTheme.colorScheme.primary,
+//                containerColor = MaterialTheme.colorScheme.surfaceVariant,
                 shape = RoundedCornerShape(10.dp)
             )
         }

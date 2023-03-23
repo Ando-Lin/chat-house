@@ -39,4 +39,20 @@
     <string name="add_addtional_sentences_before_sending">发送前添加额外的引导</string>
     <string name="role_settings">角色设置</string>
     <string name="extra_settings">额外设置</string>
+    <string name="chat_mode">对话模式</string>
+    <string name="edit_mode">编辑模式</string>
+    <string name="multi_select">多选</string>
+    <string name="clear_the_conversation">清空对话</string>
+    <string name="i_say_">我说……</string>
+    <string name="they_say_">他说……</string>
+    <string name="carry_selected">携带选中</string>
+    <string name="exclude_selected">排除选中</string>
+    <string name="delete_selected">删除选中</string>
+    <string name="close_multi_select_mode">关闭多选</string>
+    <string name="enable_multi_select_mode">启用多选</string>
+    <string name="model">模型</string>
+    <string name="strategies">策略</string>
+    <string name="warning_clear_conversation">此操作将清除当前对话的所有消息</string>
+    <string name="confirm_delete">确认是否清除</string>
+    <string name="send_failure">发送失败</string>
 </resources>

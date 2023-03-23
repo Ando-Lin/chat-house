@@ -5,13 +5,12 @@ package com.ando.tastechatgpt.ui.screen.state
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.*
+import androidx.paging.compose.collectAsLazyPagingItems
 import com.ando.tastechatgpt.MainScreenDestination
 import com.ando.tastechatgpt.constant.HUMAN_UID
 import com.ando.tastechatgpt.constant.PreferencesKey
@@ -20,8 +19,13 @@ import com.ando.tastechatgpt.data.repo.UserRepo
 import com.ando.tastechatgpt.domain.entity.ChatMessageEntity
 import com.ando.tastechatgpt.domain.entity.MessageStatus
 import com.ando.tastechatgpt.domain.pojo.ChatMessage
+import com.ando.tastechatgpt.domain.pojo.toEntity
 import com.ando.tastechatgpt.model.ChatModelManger
 import com.ando.tastechatgpt.profile
+import com.ando.tastechatgpt.ui.component.BubbleTextUiState
+import com.ando.tastechatgpt.ui.component.exclusive.ChatScreenBottomBarUiState
+import com.ando.tastechatgpt.ui.component.exclusive.ChatScreenSettingsUiState
+import com.ando.tastechatgpt.ui.component.exclusive.ChatScreenTopBarUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
@@ -40,54 +44,90 @@ class ChatViewModel @Inject constructor(
     private val external: CoroutineScope
 ) : ViewModel() {
     private val myId = HUMAN_UID
-    private val currentModelFlow: Flow<String?>
-        get() = context.profile.data.map { it[PreferencesKey.currentModel] }
-    private val currentChatIdFlow: Flow<Int?>
-        get() = context.profile.data.map { it[PreferencesKey.currentChatId] }
-    private val chatIdFlow: SharedFlow<Int> = flow {
-        val flow = savedStateHandle
-            .getStateFlow(MainScreenDestination.tabParas, "")
-            .onEach { Log.i(TAG, "stateflow.value=$it ") }
-            .combine(currentChatIdFlow.distinctUntilChanged()) { v1, v2 ->
-                Log.i(TAG, "flow bine: v1=$v1, v2=$v2")
-                return@combine when {
-                    v1.isNotBlank() -> {
-                        val id = v1.toIntOrNull()?:-1
-                        if (id != v2) updateCurrentChatId(id)
-                        id
-                    }
-                    v2 != null -> v2
-                    else -> -1
-                }
-            }
-            .distinctUntilChanged()
-        emitAll(flow)
-    }.shareIn(viewModelScope, SharingStarted.Lazily, 1)
 
-    var bottomBarUiState by mutableStateOf(ChatBottomBarUiState(""))
-        private set
+    //从配置读取当前模型
+    private val currentModelFlow: StateFlow<String>
+        get() = context.profile.data.map { it[PreferencesKey.currentModel] ?: "" }
+            .stateIn(viewModelScope, SharingStarted.Lazily, "")
+
+    //从配置读取当前chatId
+    private val currentChatIdFlow: StateFlow<Int?>
+        get() = context.profile.data.map { it[PreferencesKey.currentChatId] }
+            .stateIn(viewModelScope, SharingStarted.Lazily, null)
+
+    //从savedStateHandle和配置中读取当前chatId. 以savedStateHandle的值为主
+    private val chatIdFlow: StateFlow<Int> = savedStateHandle
+        .getStateFlow(MainScreenDestination.tabParas, "")
+        .onEach { Log.i(TAG, "stateflow.value=$it ") }
+        .combine(currentChatIdFlow) { v1, v2 ->
+            Log.i(TAG, "flow bine: v1=$v1, v2=$v2")
+            return@combine when {
+                v1.isNotBlank() -> {
+                    val id = v1.toIntOrNull() ?: -1
+                    if (id != v2) updateCurrentChatId(id)
+                    id
+                }
+                v2 != null -> v2
+                else -> -1
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.Lazily, -1)
+
+
     private val _availableModels = chatRepo.availableModelList
+
     private var titleFlow = chatIdFlow
         .flatMapLatest { userRepo.fetchById(it) }
         .map { it?.name ?: "" }
 
-    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
-        updateUiMessage(throwable.message ?: "发生异常")
-        Log.e(TAG, "协程异常: ", throwable)
-    }
 
+    private val editModeState = mutableStateOf(false)
+    private val multiSelectMode = mutableStateOf(false)
+
+    private val settingsUiState = mutableStateOf(
+        ChatScreenSettingsUiState(
+            modelListFlow = flowOf(_availableModels),
+            strategyListFlow = emptyFlow(), //TODO: 策略列表
+            currentModelFlow = currentModelFlow,
+            currentStrategyFlow = emptyFlow(), //TODO: 当前策略
+            editModeState = editModeState,
+            multiSelectModeState = multiSelectMode
+        )
+    )
+
+
+    private val topBarUiState = mutableStateOf(
+        ChatScreenTopBarUiState(
+            titleFlow = titleFlow,
+            settingsUiStateState = settingsUiState,
+        )
+    )
+
+    private val bottomBarUiState =
+        mutableStateOf(
+            ChatScreenBottomBarUiState(
+                editModeState = editModeState,
+                multiSelectModeState = multiSelectMode
+            )
+        )
 
     var screenUiState by mutableStateOf(
         ChatScreenUiState(
-            titleFlow = titleFlow,
-            availableModels = _availableModels,
-            currentModel = currentModelFlow,
-            flowPagingData = getPagingData()
+            flowFlowPagingData = getPagingData(),
+            myId = myId,
+            topBarUiStateState = topBarUiState,
+            bottomBarUiStateState = bottomBarUiState
         )
     )
         private set
 
+    //保存多选模式下选中的消息id
+    private val selectedMessageId: MutableList<Int> = mutableListOf()
 
+
+    /**
+     * 更新当前chatId. 写入到datastore中
+     */
     private fun updateCurrentChatId(chatId: Int?) {
         chatId ?: return
         viewModelScope.launch {
@@ -100,6 +140,9 @@ class ChatViewModel @Inject constructor(
     }
 
 
+    /**
+     * 更新当前模型
+     */
     fun updateCurrentModel(modelName: String) {
         external.launch {
             context.profile.updateData {
@@ -110,58 +153,154 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    fun updateTextFieldValue(value: String) {
-        bottomBarUiState = bottomBarUiState.copy(textValue = value)
+    /**
+     * 更新底部输入框的文字
+     */
+    fun updateInputText(value: String) {
+        bottomBarUiState.value = bottomBarUiState.value.copy(text = value)
     }
 
-
+    /**
+     * 更新消息内容
+     */
     fun updateMessageContent(id: Int, content: String) {
         chatRepo.update(id = id, msg = content)
     }
 
-    fun updateUiMessage(message: String) {
+    /**
+     * 更新用于通知的消息
+     */
+    private fun updateUiMessage(message: String) {
         screenUiState = screenUiState.copy(message = message)
+    }
+
+    /**
+     * 更新策略
+     */
+    fun updateStrategy(strategy: String) {
+        TODO()
+    }
+
+    /**
+     * 清除对话
+     */
+    fun clearConversation() {
+        //获取当前chatId
+        val chatId = chatIdFlow.value
+        //TODO: 处理
+    }
+
+    /**
+     * 将选中的消息id在发送时携带
+     */
+    fun selectedToCarry() {
+        //TODO: 处理
+        selectedMessageId.clear()
+    }
+
+    /**
+     * 将选中的消息id在发送时删除
+     */
+    fun selectedToExclude() {
+        //TODO: 处理
+        selectedMessageId.clear()
+    }
+
+    /**
+     * 将选中的消息id删除
+     */
+    fun selectedTODelete() {
+        //TODO: 处理
+        selectedMessageId.clear()
+    }
+
+    /**
+     * 收集选中的消息id
+     */
+    fun collectSelectedId(messageId: Int) {
+        if (multiSelectMode.value) {
+            selectedMessageId.add(messageId)
+        }
+    }
+
+    /**
+     * 转变多选模式
+     */
+    fun switchMultiSelectModeState(state: Boolean? = null) {
+        val targetState = state ?: !(settingsUiState.value.multiSelectMode)
+        multiSelectMode.value = targetState
+    }
+
+    /**
+     * 转变阅读模式
+     */
+    fun switchEditModeState(state: Boolean? = null) {
+        val targetState = state ?: !(settingsUiState.value.editMode)
+        editModeState.value = targetState
     }
 
     /**
      * 发送消息
      */
-    fun sendMessage(modelName: String, msg: String, previousMsgTime: LocalDateTime?) {
-        val chatId = chatIdFlow.replayCache[0]
-        if (chatId==-1){
+    fun sendMessage(msg: String, previousMsgTime: LocalDateTime?, fromMe: Boolean = true) {
+        //
+        val editMode = settingsUiState.value.editMode
+        //获取当前chatId
+        val chatId = chatIdFlow.value
+        if (chatId == -1) {
             updateUiMessage("角色不存在")
             return
         }
+
+        //计算当前时间与上个消息的时间差
         val now = LocalDateTime.now()
         val last = previousMsgTime ?: LocalDateTime.MIN
         val secondDiff = Duration.between(last, now).seconds
+
+        //创建消息实例
         val message = ChatMessage(
             chatId = chatId,
-            uid = myId,
+            uid = if (fromMe) myId else chatId,
             text = msg,
             timestamp = now,
             secondDiff = secondDiff,
-            status = MessageStatus.Sending
+            status = if (editMode) MessageStatus.Success else MessageStatus.Sending
         )
-        //消息发送
-        kotlin.runCatching {
-            chatRepo.sendMessage(message = message, modelName = modelName)
-        }.onFailure { updateUiMessage("消息发送失败：${it.message}") }
+
+        //是否是编辑模式
+        if (settingsUiState.value.editMode) {
+            //异常处理
+            val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
+                updateUiMessage("消息保存失败：${throwable.message}")
+            }
+            //编辑模式下并不发送消息，而是直接插入数据库中
+            viewModelScope.launch(exceptionHandler) {
+                chatRepo.save(message.toEntity())
+            }
+        } else {
+            //获取当前模型
+            val currentModel = currentModelFlow.value
+
+            //消息发送
+            kotlin.runCatching {
+                chatRepo.sendMessage(message = message, modelName = currentModel)
+            }.onFailure { updateUiMessage("消息发送失败：${it.message}") }
+        }
+
         //重置输入框文本
-        updateTextFieldValue("")
+        updateInputText("")
     }
 
     /**
      * 重发送消息
      */
     fun resendMessage(
-        modelName: String,
         msgId: Int,
         previousMsgTime: LocalDateTime?,
         msg: String
     ) {
         this.deleteMessage(msgId)
-        this.sendMessage(modelName, msg, previousMsgTime)
+        this.sendMessage(msg, previousMsgTime)
     }
 
     /**
@@ -177,8 +316,8 @@ class ChatViewModel @Inject constructor(
      * 获取pagingData
      */
     private fun getPagingData(): Flow<Flow<PagingData<ChatMessageUiState>>> {
-        return chatIdFlow.mapLatest {chatId->
-            if (chatId==-1){
+        return chatIdFlow.mapLatest { chatId ->
+            if (chatId == -1) {
                 return@mapLatest flowOf(PagingData.empty())
             }
             Pager(
@@ -193,21 +332,30 @@ class ChatViewModel @Inject constructor(
                         val user = userFlow.first()
                         ChatMessageUiState(
                             entity = value,
-                            avatar = user?.avatar
+                            avatar = user?.avatar,
+                            bubbleTextUiState = BubbleTextUiState(
+                                text = value.text,
+                                isMe = myId == user?.id,
+                                editModeState = editModeState,
+                                selected = false, //TODO: 由entity得到或者过滤器得到
+                                multiSelectModeState = multiSelectMode
+                            )
                         )
                     }
                 }
                 .catch { updateUiMessage("获取分页数据失败：${it.message}") }
                 .cachedIn(viewModelScope)
         }
-        }
+    }
 }
 
 data class ChatMessageUiState(
-    private val entity: ChatMessageEntity,
     val avatar: Uri?,
-    val status: MessageStatus = entity.status
+    private val entity: ChatMessageEntity,
+    val bubbleTextUiState: BubbleTextUiState,
 ) {
+    val status: MessageStatus
+        get() = entity.status
     val id: Int
         get() = entity.id
     val uid: Int
@@ -221,16 +369,22 @@ data class ChatMessageUiState(
 }
 
 data class ChatScreenUiState(
-    val titleFlow: Flow<String>,
-    val availableModels: List<String>,
-    val currentModel: Flow<String?>,
-    val flowPagingData: Flow<Flow<PagingData<ChatMessageUiState>>>,
+    private val flowFlowPagingData: Flow<Flow<PagingData<ChatMessageUiState>>>,
     val message: String = "",
-    val myId: Int = HUMAN_UID
-)
+    val myId: Int = HUMAN_UID,
+    private val topBarUiStateState: State<ChatScreenTopBarUiState>,
+    private val bottomBarUiStateState: State<ChatScreenBottomBarUiState>
+) {
+    val topBarUiState: ChatScreenTopBarUiState
+        get() = topBarUiStateState.value
+    val bottomBarUiState: ChatScreenBottomBarUiState
+        get() = bottomBarUiStateState.value
 
-data class ChatBottomBarUiState(
-    val textValue: String
-)
+    @Composable
+    fun lazyPagingDataItems() = flowFlowPagingData
+        .collectAsState(initial = flowOf(PagingData.empty())).value
+        .collectAsLazyPagingItems()
+}
+
 
 private const val TAG = "ChatViewModel"
