@@ -2,16 +2,16 @@ package com.ando.tastechatgpt.data.repo
 
 import androidx.paging.PagingSource
 import com.ando.tastechatgpt.domain.entity.ChatMessageEntity
-import com.ando.tastechatgpt.domain.entity.ChatStatusPojo
 import com.ando.tastechatgpt.domain.entity.MessageStatus
 import com.ando.tastechatgpt.domain.pojo.ChatMessage
 import com.ando.tastechatgpt.domain.pojo.PageQuery
 import kotlinx.coroutines.flow.Flow
 
 interface ChatRepo {
-    val availableModelList:List<String>
+    val availableModelList: List<String>
 
-    fun getRecentChatPagingSource():PagingSource<Int, ChatMessageEntity>
+    fun getRecentChatPagingSource(): PagingSource<Int, ChatMessageEntity>
+
     /**
      * 获取聊天对象的聊天分页
      * @param chatId: 聊天对象Id
@@ -27,10 +27,14 @@ interface ChatRepo {
     /**
      * 分页查询
      */
-    fun getPagingByCidAndUid(chatId: Int, uid: Int, pageQuery: PageQuery):Flow<List<ChatMessageEntity>>
+    fun getPagingByCidAndUid(
+        chatId: Int,
+        uid: Int,
+        pageQuery: PageQuery
+    ): Flow<List<ChatMessageEntity>>
 
-    suspend fun save(messageEntity: ChatMessageEntity): Int
-    fun deleteMessage(id: Int)
-    fun update(id:Int, msg:String?=null, status:MessageStatus?=null)
-    fun sendMessage(modelName: String, message: ChatMessage)
+    suspend fun save(messageEntity: ChatMessageEntity): Result<Int>
+    suspend fun deleteMessage(id: Int): Result<Unit>
+    suspend fun update(id: Int, msg: String? = null, status: MessageStatus? = null): Result<Unit>
+    suspend fun sendMessage(modelName: String, message: ChatMessage): Result<Int>
 }

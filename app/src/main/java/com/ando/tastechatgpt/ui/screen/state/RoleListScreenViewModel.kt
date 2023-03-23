@@ -14,6 +14,7 @@ import com.ando.tastechatgpt.domain.pojo.User
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
@@ -23,6 +24,7 @@ class RoleListScreenViewModel @Inject constructor(
     var screenUiState: RoleListScreenUiState by mutableStateOf(
         RoleListScreenUiState(getPagingDataFlow())
     )
+
     private fun getPagingDataFlow() =
         Pager(
             config = PagingConfig(pageSize = 20),
@@ -34,14 +36,15 @@ class RoleListScreenViewModel @Inject constructor(
             }
             .cachedIn(viewModelScope)
 
-    fun delete(uid:Int){
-        kotlin.runCatching {
+    fun delete(uid: Int) {
+        viewModelScope.launch {
             userRepo.deleteById(uid)
-        }.onFailure { updateMessage("删除用户失败${it.message}") }
-            .onSuccess { updateMessage("成功删除用户") }
+                .onFailure { updateMessage("删除用户失败${it.message}") }
+                .onSuccess { updateMessage("成功删除用户") }
+        }
     }
 
-    private fun updateMessage(message: String){
+    private fun updateMessage(message: String) {
         screenUiState = screenUiState.copy(message = message)
     }
 
@@ -49,6 +52,6 @@ class RoleListScreenViewModel @Inject constructor(
 
 data class RoleListScreenUiState(
     val pagingDataFlow: Flow<PagingData<User>>,
-    val message:String = "",
-    val myId:Int = HUMAN_UID
+    val message: String = "",
+    val myId: Int = HUMAN_UID
 )

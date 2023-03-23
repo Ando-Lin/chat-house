@@ -14,20 +14,21 @@ import com.ando.tastechatgpt.domain.pojo.ChatMessage
 import com.ando.tastechatgpt.domain.pojo.PageQuery
 import com.ando.tastechatgpt.domain.pojo.RoleMessage
 import com.ando.tastechatgpt.domain.pojo.toEntity
-import com.ando.tastechatgpt.exception.FetchDataException
 import com.ando.tastechatgpt.exception.HttpRequestException
 import com.ando.tastechatgpt.exception.NoSuchUserException
 import com.ando.tastechatgpt.model.ChatModel
 import com.ando.tastechatgpt.model.ChatModelManger
 import com.ando.tastechatgpt.profile
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 import java.time.Duration
 import java.time.LocalDateTime
 import javax.inject.Inject
-import kotlin.coroutines.CoroutineContext
 
 
 class ChatRepoImpl @Inject constructor(
@@ -102,38 +103,23 @@ class ChatRepoImpl @Inject constructor(
      * @param uid: 用户id
      * @return: 角色消息列表。
      */
-    @OptIn(FlowPreview::class)
     private suspend fun getHistory(chatId: Int, uid: Int): MutableList<RoleMessage> {
-        var page = 1
         val pageSize = 20
         val list = mutableListOf<RoleMessage>()
         //600是指令token的估计值，0.87是中文字符/token的大致比率
         val maxToken: Int = (4096 * 0.87).toInt() - 600
-        val aiLastMessage = getPagingByCidAndUid(
-            chatId = chatId,
-            uid = uid,
-            pageQuery = PageQuery(pageSize = 1, page = 1)
-        ).map { if (it.isNotEmpty()) it[0] else null }
-            .firstOrNull()
+        val aiLastMessage = withContext(ioDispatcher) {
+            getPagingByCidAndUid(
+                chatId = chatId,
+                uid = uid,
+                pageQuery = PageQuery(pageSize = 1, page = 1)
+            )
+                .map { if (it.isNotEmpty()) it[0] else null }
+                .firstOrNull()
+        }
         var count: Int = aiLastMessage?.text?.length ?: 0
 
-
-        val pageFlow = flow<ChatMessageEntity> {
-            var realSize: Int = pageSize
-            while (pageSize == realSize) {
-                val flow = getPagingByCidAndUid(
-                    chatId = chatId,
-                    uid = HUMAN_UID,
-                    pageQuery = PageQuery(pageSize = pageSize, page = page++)
-                )
-                    .onEach { realSize = it.size }
-                    .onCompletion {
-                        Log.i(TAG, "getHistory: flow onCompletion")
-                    }
-                val result = flow.first()
-                emitAll(result.asFlow())
-            }
-        }
+        val pageFlow = fetchAllMessageFlowByChatId(pageSize = pageSize, chatId = chatId)
 
         pageFlow
             .distinctUntilChanged()
@@ -151,41 +137,34 @@ class ChatRepoImpl @Inject constructor(
                 Log.i(TAG, "getHistory: it=$it")
             }
 
-//        while (true) {
-//            //获取异步流
-//            val flow = getPagingByCidAndUid(
-//                chatId = chatId,
-//                uid = HUMAN_UID,
-//                pageQuery = PageQuery(pageSize = pageSize, page = page)
-//            )
-//            //从异步流获取历史消息
-//            flow
-//                .map {
-//                    realSize = it.size
-//                    it.asFlow()
-//                }
-//                .flattenConcat()
-//                .filter { it.status == MessageStatus.Success }
-//                .map {
-//                    RoleMessage(role = RoleMessage.USER_ROLE, content = it.text)
-//                }
-//                .onEach { value -> count += value.content.length }
-//                .onEach { list.add(0, it) }
-//                .onCompletion {  }
-//                .collect{
-//                    Log.i(TAG, "getHistory: it=$it")
-//                }
-//
-//            //当字数超过最大token时不再查询历史
-//            if (count < maxToken && realSize == pageSize)
-//                page++
-//            else
-//                break
-//        }
         aiLastMessage?.let {
             list.add(RoleMessage(role = "assistant", content = it.text))
         }
         return list
+    }
+
+    /**
+     * 获取chatId的所有消息。
+     * 原理：当下游收集pageSize大小的数据后自动发送下一页的flow
+     */
+    private fun fetchAllMessageFlowByChatId(pageSize: Int, chatId: Int): Flow<ChatMessageEntity> {
+        return flow {
+            var page = 1
+            var realSize: Int = pageSize
+            while (pageSize == realSize) {
+                val flow = getPagingByCidAndUid(
+                    chatId = chatId,
+                    uid = HUMAN_UID,
+                    pageQuery = PageQuery(pageSize = pageSize, page = page++)
+                )
+                    .onEach { realSize = it.size }
+                    .onCompletion {
+                        Log.i(TAG, "getHistory: flow onCompletion")
+                    }
+                val result = flow.first()
+                emitAll(result.asFlow())
+            }
+        }
     }
 
     private suspend fun getApiKey(modelName: String): String {
@@ -195,95 +174,114 @@ class ChatRepoImpl @Inject constructor(
 
     /**
      * 发送消息。目前chatId等于AI的uid。
-     * TODO: 建立chatId和uid的表，通过查询chat来获取一个或一组uid
+     * TODO: 解绑chatId和uid的一一对应关系
      */
-    @OptIn(ExperimentalCoroutinesApi::class)
-    override fun sendMessage(modelName: String, message: ChatMessage) {
+    override suspend fun sendMessage(modelName: String, message: ChatMessage): Result<Int> {
         Log.i(TAG, "sendMessage: \n modelName=$modelName \n message=$message")
 
-        val handler = CoroutineExceptionHandler { _, throwable ->
-            Log.e(TAG, "sendMessage: 发送消息异常", throwable)
-        }
-        val deferred = externalScope.async(ioDispatcher + handler) {
-            val chatId = message.chatId
-            //获取chatId的用户
-            val user =
-                userRepo.fetchById(chatId).first() ?: throw NoSuchUserException(chatId)
-            //获取用户发送的信息
-            val roleMessages =
-                getHistory(chatId = message.chatId, uid = message.chatId)
-            //添加指令
-            roleMessages.addAll(
-                0,
-                getInstructionRoleMessages(
-                    name = user.name ?: "",
-                    description = user.description ?: ""
-                )
-            )
-
-            Log.i(TAG, "sendMessage: \n roleMessages = $roleMessages")
-
-            //添加最新消息
-            roleMessages.add(roleMessages.size, RoleMessage(RoleMessage.USER_ROLE, message.text))
-            //插入数据库
-            val id = localDS.insert(message.toEntity())
-            try {
-                //从配置文件中获取apiKey
-                val apiKey = getApiKey(modelName)
-                getPagingByCidAndUid(
-                    chatId = message.chatId,
-                    uid = message.uid,
-                    pageQuery = PageQuery(pageSize = 20, page = 1)
-                )
-                //查询
-                val responseMessage = chatModelManger.sendMessages(
-                    modelName = modelName,
-                    para = ChatModel.Para(apiKey = apiKey),
-                    messages = roleMessages
-                ).first()
-                //查询成功则更新发送状态
-                update(id = id, status = MessageStatus.Success)
-                //计算时间差
-                val flow = localDS.getLatestByChatId(chatId = chatId)
-                val messageEntity = flow.first()
-                val timestamp = messageEntity?.timestamp ?: LocalDateTime.MIN
-                val now = LocalDateTime.now()
-                val diff = Duration.between(timestamp, now).seconds
-                //插入到本地数据库中
-                localDS.insert(
-                    ChatMessageEntity(
-                        chatId = chatId,
-                        uid = chatId,
-                        text = responseMessage ?: "",
-                        timestamp = now,
-                        secondDiff = diff
+        return withContext(externalScope.coroutineContext + ioDispatcher) {
+            kotlin.runCatching {
+                val chatId = message.chatId
+                //获取chatId的用户
+                val user = withContext(ioDispatcher) {
+                    userRepo.fetchById(chatId).first() ?: throw NoSuchUserException(chatId)
+                }
+                //获取用户发送的信息
+                val roleMessages = withContext(ioDispatcher) {
+                    getHistory(chatId = message.chatId, uid = message.chatId)
+                }
+                //添加指令
+                roleMessages.addAll(
+                    0,
+                    getInstructionRoleMessages(
+                        name = user.name,
+                        description = user.description
                     )
                 )
-            } catch (e: HttpException) {
-                update(id = id, status = MessageStatus.Failed)
-                throw HttpRequestException(e)
-            } catch (e: Exception) {
-                update(id = id, status = MessageStatus.Failed)
-                throw e
+
+                Log.i(TAG, "sendMessage: \n roleMessages = $roleMessages")
+
+                //添加最新消息
+                roleMessages.add(
+                    roleMessages.size,
+                    RoleMessage(RoleMessage.USER_ROLE, message.text)
+                )
+                //插入数据库
+                val messageId = withContext(ioDispatcher) {
+                    localDS.insert(message.toEntity())
+                }
+                try {
+                    sendMessage(modelName, roleMessages, chatId, messageId)
+                } catch (e: HttpException) {
+                    update(id = messageId, status = MessageStatus.Failed)
+                    throw HttpRequestException(e)
+                } catch (e: Exception) {
+                    update(id = messageId, status = MessageStatus.Failed)
+                    throw e
+                }
             }
         }
     }
 
-    override suspend fun save(messageEntity: ChatMessageEntity): Int {
+
+    private suspend fun sendMessage(
+        modelName: String,
+        roleMessages: List<RoleMessage>,
+        chatId: Int,
+        messageId: Int
+    ): Int {
+        //从配置文件中获取apiKey
+        val apiKey = getApiKey(modelName)
+        //实际发送消息
+        val responseMessage = chatModelManger.sendMessages(
+            modelName = modelName,
+            para = ChatModel.Para(apiKey = apiKey),
+            messages = roleMessages
+        ).first()
+        //查询成功则更新发送状态
+        withContext(ioDispatcher) {
+            update(id = messageId, status = MessageStatus.Success)
+        }
+        //计算时间差
+        return withContext(ioDispatcher) {
+            val messageEntity = localDS.getLatestByChatId(chatId = chatId).first()
+            val timestamp = messageEntity?.timestamp ?: LocalDateTime.MIN
+            val now = LocalDateTime.now()
+            val diff = Duration.between(timestamp, now).seconds
+            //插入到本地数据库中
+            localDS.insert(
+                ChatMessageEntity(
+                    chatId = chatId,
+                    uid = chatId,
+                    text = responseMessage ?: "",
+                    timestamp = now,
+                    secondDiff = diff
+                )
+            )
+        }
+    }
+
+    override suspend fun save(messageEntity: ChatMessageEntity): Result<Int> {
         return withContext(externalScope.coroutineContext) {
-            localDS.insert(messageEntity)
+            kotlin.runCatching {
+                localDS.insert(messageEntity)
+            }
         }
     }
 
-    override fun deleteMessage(id: Int) {
-        externalScope.launch {
-            localDS.delete(id)
+    override suspend fun deleteMessage(id: Int): Result<Unit> {
+        return withContext(externalScope.coroutineContext) {
+            kotlin.runCatching {
+                localDS.delete(id)
+            }
         }
     }
 
-    override fun update(id: Int, msg: String?, status: MessageStatus?) {
-        externalScope.launch {
-            localDS.update(id, status, msg)
+    override suspend fun update(id: Int, msg: String?, status: MessageStatus?): Result<Unit> {
+        return withContext(externalScope.coroutineContext) {
+            kotlin.runCatching {
+                localDS.update(id, status, msg)
+            }
         }
     }
 

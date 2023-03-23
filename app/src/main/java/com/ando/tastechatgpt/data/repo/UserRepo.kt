@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
 interface UserRepo {
     fun getPagingSource():PagingSource<Int, UserEntity>
     fun fetchById(id: Int):Flow<UserEntity?>
-    fun deleteById(id: Int)
-    fun save(user: UserEntity)
-    fun update(user: User)
+    suspend fun deleteById(id: Int): Result<Unit>
+    suspend fun save(user: UserEntity): Result<Int>
+    suspend fun update(user: User): Result<Unit>
 }

@@ -9,9 +9,9 @@ import com.ando.tastechatgpt.domain.pojo.User
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 import javax.inject.Inject
 
@@ -69,21 +69,27 @@ class UserRepoImpl @Inject constructor(
         return localDataSource.getById(id = id).flowOn(ioDispatcher)
     }
 
-    override fun deleteById(id: Int) {
-        external.launch {
-            localDataSource.deleteById(id)
+    override suspend fun deleteById(id: Int): Result<Unit> {
+        return withContext(external.coroutineContext + ioDispatcher) {
+            kotlin.runCatching {
+                localDataSource.deleteById(id)
+            }
         }
     }
 
-    override fun save(user: UserEntity) {
-        external.launch {
-            localDataSource.save(user)
+    override suspend fun save(user: UserEntity): Result<Int> {
+        return withContext(external.coroutineContext + ioDispatcher) {
+            kotlin.runCatching {
+                localDataSource.save(user)
+            }
         }
     }
 
-    override fun update(user: User) {
-        external.launch {
-            localDataSource.update(user)
+    override suspend fun update(user: User): Result<Unit> {
+        return withContext(external.coroutineContext + ioDispatcher) {
+            kotlin.runCatching {
+                localDataSource.update(user)
+            }
         }
     }
 

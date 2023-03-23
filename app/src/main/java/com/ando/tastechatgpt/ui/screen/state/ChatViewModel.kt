@@ -164,7 +164,10 @@ class ChatViewModel @Inject constructor(
      * 更新消息内容
      */
     fun updateMessageContent(id: Int, content: String) {
-        chatRepo.update(id = id, msg = content)
+        viewModelScope.launch {
+            chatRepo.update(id = id, msg = content)
+                .onFailure { updateUiMessage("更新消息异常: ${it.message}") }
+        }
     }
 
     /**
@@ -270,21 +273,20 @@ class ChatViewModel @Inject constructor(
         //是否是编辑模式
         if (settingsUiState.value.editMode) {
             //异常处理
-            val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
-                updateUiMessage("消息保存失败：${throwable.message}")
-            }
             //编辑模式下并不发送消息，而是直接插入数据库中
-            viewModelScope.launch(exceptionHandler) {
+            viewModelScope.launch {
                 chatRepo.save(message.toEntity())
+                    .onFailure { updateUiMessage("保存消息异常：${it.message}") }
             }
         } else {
             //获取当前模型
             val currentModel = currentModelFlow.value
 
             //消息发送
-            kotlin.runCatching {
+            viewModelScope.launch {
                 chatRepo.sendMessage(message = message, modelName = currentModel)
-            }.onFailure { updateUiMessage("消息发送失败：${it.message}") }
+                    .onFailure { updateUiMessage("消息发送失败：${it.message}") }
+            }
         }
 
         //重置输入框文本
@@ -307,9 +309,10 @@ class ChatViewModel @Inject constructor(
      * 删除消息
      */
     fun deleteMessage(msgId: Int) {
-        kotlin.runCatching {
+        viewModelScope.launch {
             chatRepo.deleteMessage(msgId)
-        }.onFailure { updateUiMessage("删除消息失败：${it.message}") }
+                .onFailure { updateUiMessage("删除消息失败：${it.message}") }
+        }
     }
 
     /**
