@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalFoundationApi::class)
+@file:OptIn(ExperimentalFoundationApi::class, ExperimentalFoundationApi::class)
 
 package com.ando.tastechatgpt.ui.screen
 
@@ -11,8 +11,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.FocusInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -28,8 +29,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -37,19 +40,13 @@ import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.ando.tastechatgpt.R
-import com.ando.tastechatgpt.domain.pojo.User
+import com.ando.tastechatgpt.domain.pojo.UserDetail
 import com.ando.tastechatgpt.ui.component.*
 import com.ando.tastechatgpt.ui.screen.state.ProfileExtraSettingUiState
 import com.ando.tastechatgpt.ui.screen.state.ProfileViewModel
 import com.ando.tastechatgpt.ui.theme.TasteChatGPTTheme
 import com.ando.tastechatgpt.util.Utils
-import com.skydoves.cloudy.Cloudy
-import com.skydoves.cloudy.internals.render.RenderScriptToolkit
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,6 +64,7 @@ fun ProfileScreen(
         0 -> stringResource(id = R.string.role_settings)
         else -> stringResource(id = R.string.extra_settings)
     }
+    val focusManager = LocalFocusManager.current
 
     //显示消息
     LaunchedEffect(message) {
@@ -98,15 +96,6 @@ fun ProfileScreen(
         checkAndBack()
     }
 
-    //弹窗询问是否保存
-    AlertDialogForWarningSave(
-        dialogVisible = dialogState,
-        onChoiseNotSave = { backAction() },
-        onChoiseSave = { viewModel.saveUser();backAction() },
-        onDismissRequest = { dialogState = false }) {
-        Text(text = stringResource(id = R.string.unsaved_warning))
-    }
-
 
     Scaffold(
         topBar = {
@@ -118,7 +107,11 @@ fun ProfileScreen(
                 onClickBack = checkAndBack,
                 onClickSave = viewModel::saveUser
             )
-        }
+        },
+        modifier = Modifier
+            .pointerInput(Unit){
+                detectTapGestures { focusManager.clearFocus() }
+            }
     ) { paddingValues ->
         VerticalPager(
             pageCount = 2,
@@ -137,7 +130,7 @@ fun ProfileScreen(
                     modifier = itemModifier
                 )
                 1 -> ExtraSettings(
-                    uiState = viewModel.extraUiState,
+                    uiState = uiState.extraSettingUiState,
                     onRoleGuideCheckedChange = viewModel::updateRoleGuideEnableState,
                     onReminderModeCheckedChange = viewModel::updateReminderModeEnableState,
                     onReminderInputComplete = viewModel::updateReminder,
@@ -145,6 +138,16 @@ fun ProfileScreen(
                 )
             }
         }
+    }
+
+
+    //弹窗询问是否保存
+    AlertDialogForWarningSave(
+        dialogVisible = dialogState,
+        onChoiseNotSave = { backAction() },
+        onChoiseSave = { viewModel.saveUser();backAction() },
+        onDismissRequest = { dialogState = false }) {
+        Text(text = stringResource(id = R.string.unsaved_warning))
     }
 }
 
@@ -160,9 +163,9 @@ fun ProfileFullScreenDialog() {
 @Composable
 private fun CommonSettings(
     modifier: Modifier = Modifier,
-    tempUser: User,
+    tempUser: UserDetail,
     resultLauncher: ManagedActivityResultLauncher<String, Uri?>,
-    updateTempUser: (User) -> Unit
+    updateTempUser: (UserDetail) -> Unit
 ) {
     Column(
         modifier = modifier,
@@ -213,12 +216,17 @@ private fun ExtraSettings(
     var reminder by rememberSaveable(uiState.reminder) {
         mutableStateOf(uiState.reminder)
     }
-    val focusedAsState = interactionSource.collectIsFocusedAsState()
-    LaunchedEffect(focusedAsState) {
-        if (!focusedAsState.value && reminder != uiState.reminder) {
-            onReminderInputComplete(reminder)
+
+    //当输入框聚焦状态变化时根据状态启动输入完成函数
+    LaunchedEffect(Unit){
+        interactionSource.interactions.collectLatest {
+            Log.i(TAG, "ExtraSettings: interaction=$it")
+            if (it is FocusInteraction.Unfocus && reminder != uiState.reminder) {
+                onReminderInputComplete(reminder)
+            }
         }
     }
+
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -242,7 +250,7 @@ private fun ExtraSettings(
         AnimatedVisibility(visible = uiState.enableReminderMode) {
             TTextField(
                 text = reminder,
-                tip = stringResource(id = R.string.input_on_here),
+                tip = stringResource(id = R.string.input_on_here_v, stringResource(id = R.string.reminder)),
                 onTextChange = { reminder = it },
                 interactionSource = interactionSource,
                 maxLines = 10,

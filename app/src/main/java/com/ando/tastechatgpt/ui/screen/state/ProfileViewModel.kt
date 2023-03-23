@@ -2,29 +2,25 @@ package com.ando.tastechatgpt.ui.screen.state
 
 import android.content.Context
 import android.net.Uri
-import androidx.compose.runtime.Stable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ando.tastechatgpt.ProfileScreenDestination
 import com.ando.tastechatgpt.data.repo.UserRepo
-import com.ando.tastechatgpt.domain.entity.toUser
-import com.ando.tastechatgpt.domain.pojo.User
-import com.ando.tastechatgpt.domain.pojo.toUserEntity
+import com.ando.tastechatgpt.domain.entity.toUserDetail
+import com.ando.tastechatgpt.domain.pojo.UserDetail
+import com.ando.tastechatgpt.domain.pojo.toEntity
 import com.ando.tastechatgpt.util.Utils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import java.io.File
 import java.time.Instant
-import java.time.LocalDateTime
 import javax.inject.Inject
 
 private const val TAG = "ProfileViewModel"
@@ -39,22 +35,23 @@ class ProfileViewModel @Inject constructor(
     val uid: Int = savedStateHandle[ProfileScreenDestination.argName] ?: 0
 
     //未知用户
-    private val unknownUser: User = User(id = 0, name = "", avatar = null, description = "")
+    private val unknownUser: UserDetail = UserDetail()
 
-    private var user: User = unknownUser
+    private var user: UserDetail = unknownUser
 
     //屏幕ui状态
-    var screenUiState: ProfileScreenUiState by mutableStateOf(
-        ProfileScreenUiState(tempUser = user)
-    )
-        private set
-    var extraUiState: ProfileExtraSettingUiState by mutableStateOf(
+    private val _extraUiStateState = mutableStateOf(
         ProfileExtraSettingUiState(
-            reminder = "",//TODO: 获取初值
-            enableRoleGuide = false,
-            enableReminderMode = false
+            reminder = user.reminder,
+            enableRoleGuide = user.enableGuide,
+            enableReminderMode = user.enableReminder
         )
     )
+    private var extraUiState by _extraUiStateState
+    var screenUiState by mutableStateOf(
+        ProfileScreenUiState(tempUser = user, extraSettingUiStateState = _extraUiStateState)
+    )
+        private set
 
     //初始化user变量
     init {
@@ -66,15 +63,20 @@ class ProfileViewModel @Inject constructor(
             uid.let { value ->
                 userRepo
                     .fetchById(value)
-                    .map { it?.toUser() }
+                    .map { it?.toUserDetail() }
                     .onEach {
                         it?.let {
                             user = it
                             screenUiState = screenUiState.copy(tempUser = it)
+                            extraUiState = extraUiState.copy(
+                                reminder = it.reminder,
+                                enableRoleGuide = it.enableGuide,
+                                enableReminderMode = it.enableReminder
+                            )
                         }
                     }
                     .catch { updateMessage("获取用户时发生错误: ${it.message}") }
-                    .collect()
+                    .first()
             }
         }
     }
@@ -91,11 +93,7 @@ class ProfileViewModel @Inject constructor(
                 updateTempUser(tempUser = lastUser)
             }
 
-            val result = if (lastUser.id == 0) {
-                userRepo.save(lastUser.toUserEntity(LocalDateTime.now()))
-            } else {
-                userRepo.update(lastUser)
-            }
+            val result = userRepo.save(lastUser.toEntity())
 
             result
                 .onFailure { updateMessage("更新用户时发生错误: ${it.message}") }
@@ -109,16 +107,27 @@ class ProfileViewModel @Inject constructor(
 
     fun updateRoleGuideEnableState(state: Boolean) {
         extraUiState = extraUiState.copy(enableRoleGuide = state)
-        //TODO: 更新数据库
+        user = user.copy(enableGuide = state)
+        updateUser(user)
     }
 
     fun updateReminderModeEnableState(state: Boolean) {
         extraUiState = extraUiState.copy(enableReminderMode = state)
-        //TODO: 更新数据库
+        user = user.copy(enableReminder = state)
+        updateUser(user)
+    }
+
+    private fun updateUser(user: UserDetail) {
+        viewModelScope.launch {
+            userRepo.save(user.toEntity())
+                .onFailure { updateMessage("更新用户时发生错误: ${it.message}") }
+        }
     }
 
     fun updateReminder(value: String) {
-        //TODO：更新数据库
+        if (value == user.reminder) return
+        user = user.copy(reminder = value)
+        updateUser(user)
     }
 
     private fun updateIsModified(state: Boolean) {
@@ -129,7 +138,7 @@ class ProfileViewModel @Inject constructor(
         screenUiState = screenUiState.copy(message = message)
     }
 
-    fun updateTempUser(tempUser: User) {
+    fun updateTempUser(tempUser: UserDetail) {
         screenUiState = screenUiState.copy(tempUser = tempUser, isModified = true)
         updateIsModified(user != screenUiState.tempUser)
     }
@@ -162,10 +171,13 @@ class ProfileViewModel @Inject constructor(
 
 @Stable
 data class ProfileScreenUiState(
-    val tempUser: User,
+    val tempUser: UserDetail,
     val isModified: Boolean = false,
-    val message: String = ""
-)
+    val message: String = "",
+    private val extraSettingUiStateState: State<ProfileExtraSettingUiState>
+) {
+    val extraSettingUiState by extraSettingUiStateState
+}
 
 data class ProfileExtraSettingUiState(
     val reminder: String,

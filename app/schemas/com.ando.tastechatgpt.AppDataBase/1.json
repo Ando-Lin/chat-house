@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "70280c8b57d20ae5189a4e73a2eaf806",
+    "identityHash": "a5f688d880ecd2fd76d1741505665a9a",
     "entities": [
       {
         "tableName": "chat_msg",
@@ -62,7 +62,7 @@
       },
       {
         "tableName": "user",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `avatar` TEXT, `description` TEXT NOT NULL, `create_time` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `avatar` TEXT, `description` TEXT NOT NULL, `enable_guide` INTEGER NOT NULL DEFAULT true, `enable_reminder` INTEGER NOT NULL DEFAULT false, `reminder` TEXT NOT NULL DEFAULT '', `create_time` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -89,6 +89,27 @@
             "notNull": true
           },
           {
+            "fieldPath": "enableGuide",
+            "columnName": "enable_guide",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "true"
+          },
+          {
+            "fieldPath": "enableReminder",
+            "columnName": "enable_reminder",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "false"
+          },
+          {
+            "fieldPath": "reminder",
+            "columnName": "reminder",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
             "fieldPath": "createTime",
             "columnName": "create_time",
             "affinity": "INTEGER",
@@ -101,14 +122,24 @@
           ],
           "autoGenerate": true
         },
-        "indices": [],
+        "indices": [
+          {
+            "name": "index_user_create_time",
+            "unique": false,
+            "columnNames": [
+              "create_time"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_user_create_time` ON `${TABLE_NAME}` (`create_time`)"
+          }
+        ],
         "foreignKeys": []
       }
     ],
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '70280c8b57d20ae5189a4e73a2eaf806')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a5f688d880ecd2fd76d1741505665a9a')"
     ]
   }
 }

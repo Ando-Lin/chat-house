@@ -17,5 +17,5 @@ fun User.toUserEntity(createTime: LocalDateTime) =
         name = this.name,
         description = this.description,
         createTime = createTime,
-        avatar = this.avatar
+        avatar = this.avatar,
     )
