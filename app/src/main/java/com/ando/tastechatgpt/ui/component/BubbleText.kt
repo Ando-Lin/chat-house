@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -22,6 +23,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.ando.tastechatgpt.ext.toAnnotatedString
 import com.ando.tastechatgpt.ext.withMutableInteractionSource
 
@@ -33,6 +35,8 @@ data class BubbleTextUiState(
     private val multiSelectModeState: State<Boolean>
 ){
     internal var checked by mutableStateOf(false)
+    @Composable
+    fun checked() = rememberSaveable() { mutableStateOf(false) }
     val editMode: Boolean by editModeState
     val multiSelectMode: Boolean by multiSelectModeState
 }
@@ -74,29 +78,33 @@ fun ExtendedBubbleText(
     onClick: () -> Unit
 ) {
     val (bubbleColor, textColor) = bubbleTextColor(uiState = uiState)
-
+    var checked by uiState.checked()
     //关闭多选时取消checked
     LaunchedEffect(uiState.multiSelectMode){
         if (!uiState.multiSelectMode){
-            uiState.checked = false
+            checked = false
         }
+    }
+    //用于检测是否发生了无条件重组
+    val firstCompose = remember {
+        mutableStateOf(true)
+    }
+    //当选择变化是应取消checked
+    LaunchedEffect(uiState.selected){
+        //防止无条件重组的干扰
+        if(!firstCompose.value){
+            checked = false
+        }
+    }
+    LaunchedEffect(Unit){
+        firstCompose.value = false
     }
 
     Box {
-        BubbleText(
-            modifier = modifier,
-            text = uiState.text.toAnnotatedString(),
-            textColor = textColor,
-            containerColor = bubbleColor,
-            shapeReverse = !uiState.isMe,
-            onLongClick = onLongClick,
-            onClick = {
-                uiState.checked = uiState.multiSelectMode && !uiState.checked
-                onClick()
-            }
-        )
 
-        AnimatedVisibility(visible = uiState.checked, modifier = Modifier.align(Alignment.Center)) {
+        AnimatedVisibility(visible = checked, modifier = Modifier
+            .align(Alignment.Center)
+            .zIndex(1f)) {
             Box(
                 modifier = Modifier
                     .size(width = 65.dp, height = 40.dp)
@@ -111,6 +119,22 @@ fun ExtendedBubbleText(
                 Icon(imageVector = Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             }
         }
+
+
+        BubbleText(
+            modifier = modifier,
+            text = uiState.text.toAnnotatedString(),
+            textColor = textColor,
+            containerColor = bubbleColor,
+            shapeReverse = !uiState.isMe,
+            onLongClick = onLongClick,
+            onClick = {
+                checked = uiState.multiSelectMode && !checked
+                onClick()
+            }
+        )
+
+
     }
 }
 

@@ -3,6 +3,7 @@ package com.ando.tastechatgpt.ext
 import android.content.Context
 import android.text.format.DateUtils
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.gestures.PressGestureScope
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
@@ -72,6 +73,9 @@ suspend fun PressGestureScope.withMutableInteractionSource(
         interactionSource.emit(PressInteraction.Cancel(press))
     }
 }
+
+suspend fun Context.showToast(content:String) =
+    Toast.makeText(this, content, Toast.LENGTH_SHORT).show()
 
 private const val TAG = "Extend"
 

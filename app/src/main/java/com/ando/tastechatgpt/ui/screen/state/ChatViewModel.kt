@@ -6,6 +6,7 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.compose.runtime.*
+import androidx.core.text.isDigitsOnly
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -16,12 +17,18 @@ import com.ando.tastechatgpt.constant.HUMAN_UID
 import com.ando.tastechatgpt.constant.PreferencesKey
 import com.ando.tastechatgpt.data.repo.ChatRepo
 import com.ando.tastechatgpt.data.repo.UserRepo
+import com.ando.tastechatgpt.domain.entity.ChatEntity
 import com.ando.tastechatgpt.domain.entity.ChatMessageEntity
 import com.ando.tastechatgpt.domain.entity.MessageStatus
+import com.ando.tastechatgpt.domain.entity.toUser
+import com.ando.tastechatgpt.domain.pojo.ChatContext
 import com.ando.tastechatgpt.domain.pojo.ChatMessage
+import com.ando.tastechatgpt.domain.pojo.User
 import com.ando.tastechatgpt.domain.pojo.toEntity
 import com.ando.tastechatgpt.model.ChatModelManger
 import com.ando.tastechatgpt.profile
+import com.ando.tastechatgpt.strategy.CarryMessageStrategyManager
+import com.ando.tastechatgpt.strategy.NoCarryMessageStrategy
 import com.ando.tastechatgpt.ui.component.BubbleTextUiState
 import com.ando.tastechatgpt.ui.component.exclusive.ChatScreenBottomBarUiState
 import com.ando.tastechatgpt.ui.component.exclusive.ChatScreenSettingsUiState
@@ -40,44 +47,80 @@ class ChatViewModel @Inject constructor(
     private val userRepo: UserRepo,
     @ApplicationContext private val context: Context,
     private val chatModelManger: ChatModelManger,
+    private val messageStrategyManager: CarryMessageStrategyManager,
     private val savedStateHandle: SavedStateHandle,
     private val external: CoroutineScope
 ) : ViewModel() {
     private val myId = HUMAN_UID
 
     //从配置读取当前模型
-    private val currentModelFlow: StateFlow<String>
-        get() = context.profile.data.map { it[PreferencesKey.currentModel] ?: "" }
-            .stateIn(viewModelScope, SharingStarted.Lazily, "")
+    private val currentModelFlow: StateFlow<String> =
+        context.profile.data.map { it[PreferencesKey.currentModel] ?: "" }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, "")
 
     //从配置读取当前chatId
-    private val currentChatIdFlow: StateFlow<Int?>
-        get() = context.profile.data.map { it[PreferencesKey.currentChatId] }
+    private val currentChatIdFlow: StateFlow<Int?> =
+        context.profile.data.map { it[PreferencesKey.currentChatId] }
             .stateIn(viewModelScope, SharingStarted.Lazily, null)
 
+    //当前策略
+    private val currentStrategyFlow: MutableStateFlow<String> =
+        MutableStateFlow(NoCarryMessageStrategy.NAME)
+
+    //我的user实例
+    private val myUserFlow = userRepo.fetchById(myId)
+        .map { it?.toUser() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, User.emptyUser)
+
+
     //从savedStateHandle和配置中读取当前chatId. 以savedStateHandle的值为主
-    private val chatIdFlow: StateFlow<Int> = savedStateHandle
-        .getStateFlow(MainScreenDestination.tabParas, "")
+    private val latestChatIdFlow: StateFlow<Int?> = savedStateHandle
+        .getStateFlow(MainScreenDestination.tabParas, null as String?)
         .onEach { Log.i(TAG, "stateflow.value=$it ") }
         .combine(currentChatIdFlow) { v1, v2 ->
             Log.i(TAG, "flow bine: v1=$v1, v2=$v2")
-            return@combine when {
-                v1.isNotBlank() -> {
-                    val id = v1.toIntOrNull() ?: -1
-                    if (id != v2) updateCurrentChatId(id)
+            when {
+                v1?.isDigitsOnly() ?: false -> {
+                    val id = v1!!.toIntOrNull()
+                    if (id != v2) {
+                        updateCurrentChatId(id)
+                    }
                     id
                 }
-                v2 != null -> v2
-                else -> -1
+                else -> v2
             }
         }
-        .stateIn(viewModelScope, SharingStarted.Lazily, -1)
+        .stateIn(viewModelScope, SharingStarted.Lazily, null)
+
+    private val latestChatFlow: StateFlow<ChatEntity?> =
+        latestChatIdFlow
+            .filter {
+                it != null
+            }
+            .transformLatest {
+                val uid = it!!
+                var chat = chatRepo.fetchChatById(uid).first()
+                if (chat == null) {
+                    chat = ChatEntity.individual(uid)
+                    chatRepo.saveChat(chat)
+                        .onSuccess { emit(chat) }
+                        .onFailure { updateUiMessage("创建对话失败: ${it.localizedMessage}") }
+                }else{
+                    emit(chat)
+                }
+            }
+            .stateIn(
+                viewModelScope,
+                SharingStarted.Lazily,
+                null
+            )
 
 
     private val _availableModels = chatRepo.availableModelList
 
-    private var titleFlow = chatIdFlow
-        .flatMapLatest { userRepo.fetchById(it) }
+    private var titleFlow = latestChatFlow
+        .filter { it != null }
+        .flatMapLatest { userRepo.fetchById(it!!.uid) }
         .map { it?.name ?: "" }
 
 
@@ -87,9 +130,9 @@ class ChatViewModel @Inject constructor(
     private val settingsUiState = mutableStateOf(
         ChatScreenSettingsUiState(
             modelListFlow = flowOf(_availableModels),
-            strategyListFlow = emptyFlow(), //TODO: 策略列表
+            strategyListFlow = flowOf(messageStrategyManager.strategyList),
             currentModelFlow = currentModelFlow,
-            currentStrategyFlow = emptyFlow(), //TODO: 当前策略
+            currentStrategyFlow = currentStrategyFlow,
             editModeState = editModeState,
             multiSelectModeState = multiSelectMode
         )
@@ -122,7 +165,7 @@ class ChatViewModel @Inject constructor(
         private set
 
     //保存多选模式下选中的消息id
-    private val selectedMessageId: MutableList<Int> = mutableListOf()
+    private var selectedMessageIds: MutableSet<Int> = mutableSetOf()
 
 
     /**
@@ -165,7 +208,7 @@ class ChatViewModel @Inject constructor(
      */
     fun updateMessageContent(id: Int, content: String) {
         viewModelScope.launch {
-            chatRepo.update(id = id, msg = content)
+            chatRepo.updateMessage(id = id, msg = content)
                 .onFailure { updateUiMessage("更新消息异常: ${it.message}") }
         }
     }
@@ -181,7 +224,13 @@ class ChatViewModel @Inject constructor(
      * 更新策略
      */
     fun updateStrategy(strategy: String) {
-        TODO()
+        val chat = latestChatFlow.value
+        chat?.let {
+            viewModelScope.launch {
+                chatRepo.saveChat(it.copy(messageStrategy = strategy))
+                    .onFailure { updateUiMessage("更新策略失败：${it.localizedMessage}") }
+            }
+        }
     }
 
     /**
@@ -189,32 +238,50 @@ class ChatViewModel @Inject constructor(
      */
     fun clearConversation() {
         //获取当前chatId
-        val chatId = chatIdFlow.value
-        //TODO: 处理
+        val chat = latestChatFlow.value
+        chat?.let { value ->
+            viewModelScope.launch {
+                chatRepo.clearAllMessageByChatId(value.id)
+                    .onFailure { updateUiMessage("清除对话失败：$it") }
+            }
+        }
     }
 
     /**
      * 将选中的消息id在发送时携带
      */
     fun selectedToCarry() {
-        //TODO: 处理
-        selectedMessageId.clear()
+        viewModelScope.launch {
+            val typedArray = selectedMessageIds.toIntArray()
+            chatRepo.unifyMessage(*typedArray, selected = 1)
+                .onFailure { updateUiMessage("更新选中的消息时发生错误: ${it.localizedMessage}") }
+        }
+        selectedMessageIds = mutableSetOf()
     }
 
     /**
-     * 将选中的消息id在发送时删除
+     * 将选中的消息id在发送时排除
      */
     fun selectedToExclude() {
-        //TODO: 处理
-        selectedMessageId.clear()
+        viewModelScope.launch {
+            val typedArray = selectedMessageIds.toIntArray()
+            chatRepo.unifyMessage(*typedArray, selected = -1)
+                .onFailure { updateUiMessage("更新选中的消息时发生错误: ${it.localizedMessage}") }
+        }
+        selectedMessageIds = mutableSetOf()
     }
 
     /**
      * 将选中的消息id删除
      */
     fun selectedTODelete() {
-        //TODO: 处理
-        selectedMessageId.clear()
+        viewModelScope.launch {
+            selectedMessageIds.forEach {
+                chatRepo.deleteMessage(it)
+                    .onFailure { updateUiMessage("删除选中的消息时发生错误: ${it.localizedMessage}") }
+            }
+        }
+        selectedMessageIds = mutableSetOf()
     }
 
     /**
@@ -222,7 +289,7 @@ class ChatViewModel @Inject constructor(
      */
     fun collectSelectedId(messageId: Int) {
         if (multiSelectMode.value) {
-            selectedMessageId.add(messageId)
+            selectedMessageIds.add(messageId)
         }
     }
 
@@ -232,6 +299,7 @@ class ChatViewModel @Inject constructor(
     fun switchMultiSelectModeState(state: Boolean? = null) {
         val targetState = state ?: !(settingsUiState.value.multiSelectMode)
         multiSelectMode.value = targetState
+        selectedMessageIds = mutableSetOf()
     }
 
     /**
@@ -249,8 +317,8 @@ class ChatViewModel @Inject constructor(
         //
         val editMode = settingsUiState.value.editMode
         //获取当前chatId
-        val chatId = chatIdFlow.value
-        if (chatId == -1) {
+        val chat = latestChatFlow.value
+        if (chat == null) {
             updateUiMessage("角色不存在")
             return
         }
@@ -262,8 +330,8 @@ class ChatViewModel @Inject constructor(
 
         //创建消息实例
         val message = ChatMessage(
-            chatId = chatId,
-            uid = if (fromMe) myId else chatId,
+            chatId = chat.id,
+            uid = if (fromMe) myId else chat.uid,
             text = msg,
             timestamp = now,
             secondDiff = secondDiff,
@@ -275,17 +343,23 @@ class ChatViewModel @Inject constructor(
             //异常处理
             //编辑模式下并不发送消息，而是直接插入数据库中
             viewModelScope.launch {
-                chatRepo.save(message.toEntity())
-                    .onFailure { updateUiMessage("保存消息异常：${it.message}") }
+                chatRepo.saveMessage(message.toEntity())
+                    .onFailure {
+                        updateUiMessage("保存消息异常：${it.message}")
+                        Log.e(TAG, "sendMessage: ", it)
+                    }
             }
         } else {
-            //获取当前模型
-            val currentModel = currentModelFlow.value
 
             //消息发送
             viewModelScope.launch {
+                //获取当前模型
+                val currentModel = currentModelFlow.first()
                 chatRepo.sendMessage(message = message, modelName = currentModel)
-                    .onFailure { updateUiMessage("消息发送失败：${it.message}") }
+                    .onFailure {
+                        Log.e(TAG, "sendMessage: ", it)
+                        updateUiMessage("消息发送失败：${it.message}")
+                    }
             }
         }
 
@@ -319,36 +393,53 @@ class ChatViewModel @Inject constructor(
      * 获取pagingData
      */
     private fun getPagingData(): Flow<Flow<PagingData<ChatMessageUiState>>> {
-        return chatIdFlow.mapLatest { chatId ->
-            if (chatId == -1) {
-                return@mapLatest flowOf(PagingData.empty())
-            }
-            Pager(
-                config = PagingConfig(pageSize = 25)
-            ) {
-                chatRepo.getPagingSourceByChatId(chatId)
-            }
-                .flow
-                .map { pagingData ->
-                    pagingData.map { value ->
-                        val userFlow = userRepo.fetchById(id = value.uid)
-                        val user = userFlow.first()
-                        ChatMessageUiState(
-                            entity = value,
-                            avatar = user?.avatar,
-                            bubbleTextUiState = BubbleTextUiState(
-                                text = value.text,
-                                isMe = myId == user?.id,
-                                editModeState = editModeState,
-                                selected = false, //TODO: 由entity得到或者过滤器得到
-                                multiSelectModeState = multiSelectMode
-                            )
-                        )
-                    }
+        return latestChatFlow
+            .filter { it != null }
+            .mapLatest { chat ->
+                this.currentStrategyFlow.value = chat!!.messageStrategy
+                val user = withContext(viewModelScope.coroutineContext) {
+                    userRepo.fetchById(chat.uid).first()
                 }
-                .catch { updateUiMessage("获取分页数据失败：${it.message}") }
-                .cachedIn(viewModelScope)
-        }
+                val chatContext = ChatContext(myUid = myId)
+                Pager(config = PagingConfig(pageSize = 25)) {
+                    chatRepo.getMessagePagingSourceByChatId(chat.id)
+                }
+                    .flow
+                    .map { pagingData ->
+                        val filter = messageStrategyManager.filterBy(chat.messageStrategy)
+                        pagingData
+                            .map { value ->
+                                val avatar =
+                                    if (value.uid == user?.id) user.avatar
+                                    else myUserFlow.value?.avatar
+                                val selected =
+                                    when (value.selected) {
+                                        1 -> true
+                                        -1 -> false
+                                        else -> filter(value, chatContext)
+                                    }
+                                ChatMessageUiState(
+                                    entity = value,
+                                    avatar = avatar,
+                                    bubbleTextUiState = BubbleTextUiState(
+                                        text = value.text,
+                                        isMe = myId == value.uid,
+                                        editModeState = editModeState,
+                                        selected = selected,
+                                        multiSelectModeState = multiSelectMode
+                                    )
+                                )
+                            }
+                    }
+                    .catch {
+                        Log.e(TAG, "getPagingData: ", it)
+                        updateUiMessage("获取分页数据失败：${it.message}")
+                    }
+                    .cachedIn(viewModelScope)
+            }.catch {
+                Log.e(TAG, "getPagingData: ", it)
+                updateUiMessage("获取分页数据失败：${it.message}")
+            }
     }
 }
 

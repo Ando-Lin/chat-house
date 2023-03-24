@@ -9,7 +9,11 @@ data class User(
     val name: String,
     val avatar: Uri?,
     val description:String
-)
+){
+    companion object{
+        val emptyUser by lazy { User(id = 0, name = "", description = "", avatar = null) }
+    }
+}
 
 fun User.toUserEntity(createTime: LocalDateTime) =
     UserEntity(

@@ -85,8 +85,8 @@ fun ChatScreen(
         },
         bottomBar = {
             Surface(
-                modifier = Modifier.heightIn(min = 70.dp),
-                shadowElevation = 1.dp
+//                modifier = Modifier.heightIn(min = 70.dp),
+                shadowElevation = 2.dp
             ) {
                 ChatScreenExtendedBottomBar(
                     uiState = screenUiState.bottomBarUiState,
@@ -130,7 +130,8 @@ fun ChatScreen(
     if (dialogForOpVisible) {
         DialogForOperationItem(
             onDismissRequest = { dialogForOpVisible = false },
-            enableResend = MessageStatus.Failed == longPressedMessageUiState!!.status,
+//            enableResend = longPressedMessageUiState!!.status == MessageStatus.Failed,
+            enableResend = longPressedMessageUiState?.uid == screenUiState.myId,
             onClickResend = {
                 viewModel.resendMessage(
                     msgId = longPressedMessageUiState!!.id,
