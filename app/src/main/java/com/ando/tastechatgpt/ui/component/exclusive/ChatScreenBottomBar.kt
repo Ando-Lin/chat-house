@@ -155,7 +155,7 @@ fun InputAndSend(
         .withCondition(reverseLayout) {
             padding(end = 10.dp)
         }
-    val hasText = remember {
+    val hasText = remember(text) {
         derivedStateOf { text.isNotBlank() }
     }
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
@@ -176,7 +176,8 @@ fun InputAndSend(
             //发送按钮
             Button(
                 onClick = { onSend(text) },
-                modifier = buttonModifier
+                modifier = buttonModifier,
+                enabled = hasText.value
             ) {
                 Text(
                     text = stringResource(id = R.string.send), modifier = Modifier

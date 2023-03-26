@@ -36,7 +36,7 @@ interface ChatDao {
      * @return 分页资源
      */
     @Query("SELECT * FROM chat_msg WHERE chat_id = :chatId ORDER BY timestamp DESC")
-    fun loadPagingSourceByChatId(chatId: Int): PagingSource<Int, ChatMessageEntity>
+    fun loadMessagePagingSourceByChatId(chatId: Int): PagingSource<Int, ChatMessageEntity>
 
 
     /**
@@ -45,8 +45,11 @@ interface ChatDao {
      * @return
      */
     @Query("SELECT * FROM chat_msg WHERE chat_id = :chatId ORDER BY timestamp DESC LIMIT 1")
-    fun loadLatestByChatId(chatId: Int): Flow<ChatMessageEntity?>
+    fun loadLatestMessageByChatId(chatId: Int): Flow<ChatMessageEntity?>
 
+
+    @Query("select * from chat_msg where id = :messageId")
+    fun loadMessageById(messageId: Int):Flow<ChatMessageEntity?>
 
     /**
      * 根据chatId进行分页查询
@@ -55,7 +58,7 @@ interface ChatDao {
         "SELECT * FROM chat_msg WHERE chat_id = :chatId ORDER BY timestamp DESC "
                 + " LIMIT :pageSize OFFSET :pageOffset"
     )
-    fun loadPagingByCid(chatId: Int, pageSize: Int, pageOffset: Int): Flow<List<ChatMessageEntity>>
+    fun loadPagingMessageByCid(chatId: Int, pageSize: Int, pageOffset: Int): Flow<List<ChatMessageEntity>>
 
     /**
      * 根据chatId和uid进行分页查询
@@ -64,7 +67,7 @@ interface ChatDao {
         "SELECT * FROM chat_msg WHERE chat_id = :chatId AND uid = :uid ORDER BY timestamp DESC "
                 + " LIMIT :pageSize OFFSET :pageOffset"
     )
-    fun loadPagingByCidAndUid(
+    fun loadPagingMessageByCidAndUid(
         chatId: Int,
         uid: Int,
         pageSize: Int,
@@ -72,16 +75,16 @@ interface ChatDao {
     ): Flow<List<ChatMessageEntity>>
 
     @Query("update chat_msg set status = :status where id = :id")
-    suspend fun updateStatus(id: Int, status: MessageStatus)
+    suspend fun updateMessageStatus(id: Int, status: MessageStatus)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE, entity = ChatMessageEntity::class)
-    suspend fun insert(vararg chatMessageEntities: ChatMessageEntity): List<Long>
+    suspend fun insertMessage(vararg chatMessageEntities: ChatMessageEntity): List<Long>
 
     @Delete(entity = ChatMessageEntity::class)
-    suspend fun delete(id: IntId)
+    suspend fun deleteMessageById(id: IntId)
 
     @Query("update chat_msg set status = :targetStatus where status = :originStatus")
-    suspend fun shiftStatus(originStatus: MessageStatus, targetStatus: MessageStatus)
+    suspend fun shiftMessageStatus(originStatus: MessageStatus, targetStatus: MessageStatus)
 
     @Query("update chat_msg set text = :message where id = :id")
     suspend fun updateMessage(id: Int, message: String)

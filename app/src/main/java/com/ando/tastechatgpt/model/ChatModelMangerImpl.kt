@@ -1,22 +1,22 @@
 package com.ando.tastechatgpt.model
 
-import androidx.collection.ArrayMap
 import com.ando.tastechatgpt.domain.pojo.RoleMessage
 import kotlinx.coroutines.flow.Flow
 
 class ChatModelMangerImpl : ChatModelManger {
     //模型列表
-    private val _models: ArrayMap<String, ChatModel> = ArrayMap()
-    override val models: List<ChatModel>
-        get() = _models.map { it.value }.toList()
+    private val _models: MutableMap<String, Lazy<ChatModel>> = mutableMapOf()
+    override val models: Map<String, Lazy<ChatModel>>
+        get() = _models
 
     /**
      * 添加模型
      */
-    override fun addModel(chatModel: ChatModel): ChatModelMangerImpl {
-        _models[chatModel.name] = chatModel
+    override fun addModel(name: String, model: Lazy<ChatModel>): ChatModelManger {
+        _models[name] = model
         return this
     }
+
 
     /**
      * 发送一条消息
@@ -27,7 +27,7 @@ class ChatModelMangerImpl : ChatModelManger {
         message: String
     ): Flow<String?> {
         val model = _models[modelName] ?: throw IllegalArgumentException("未找到{$modelName}模型")
-        return model.sendMessage(message = message, para = para)
+        return model.value.sendMessage(message = message, para = para)
     }
 
     /**
@@ -38,7 +38,8 @@ class ChatModelMangerImpl : ChatModelManger {
         para: ChatModel.Para,
         messages: List<RoleMessage>
     ): Flow<String?> {
-        val model = _models[modelName] ?: throw IllegalArgumentException("未找到{$modelName}模型")
+        val lazyModel = _models[modelName] ?: throw IllegalArgumentException("未找到{$modelName}模型")
+        val model = lazyModel.value
         return if (model is LongChatModel) {
             model.sendMessages(messages = messages, para = para)
         } else {

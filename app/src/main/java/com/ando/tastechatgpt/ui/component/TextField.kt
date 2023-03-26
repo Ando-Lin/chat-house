@@ -2,6 +2,7 @@ package com.ando.tastechatgpt.ui.component
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -13,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
@@ -28,7 +30,9 @@ fun TTextField(
     showIndicator: Boolean = false,
     onTextChange: (String) -> Unit,
     textStyle: TextStyle = TextStyle.Default,
+    colors: TTextFieldColors = TTextFieldColors.defaultColors(),
     shape: Shape = RoundedCornerShape(10),
+    contentPadding: PaddingValues = PaddingValues(12.dp),
     interactionSource: MutableInteractionSource = remember {
         MutableInteractionSource()
     }
@@ -40,12 +44,12 @@ fun TTextField(
         onValueChange = onTextChange,
         maxLines = maxLines,
         modifier = modifier,
-        textStyle = textStyle,
+        textStyle = textStyle.copy(color = colors.contentColor),
         cursorBrush = SolidColor(colorScheme.primary),
         interactionSource = interactionSource,
     ) { content ->
         Surface(
-            color = colorScheme.onSurface.copy(alpha = 0.1f),
+            color = colors.containerColor,
             shape = shape,
             modifier = Modifier
                 .drawBehind {
@@ -61,7 +65,7 @@ fun TTextField(
         ) {
             Box(
                 modifier = Modifier
-                    .padding(12.dp)
+                    .padding(contentPadding)
             ) {
                 content()
                 if (text.isBlank()) {
@@ -75,3 +79,18 @@ fun TTextField(
         }
     }
 }
+
+data class TTextFieldColors(
+    val contentColor: Color,
+    val containerColor: Color
+) {
+    companion object {
+        @Composable
+        fun defaultColors(
+            contentColor: Color = MaterialTheme.colorScheme.onSurface,
+            containerColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+        ) =
+            TTextFieldColors(contentColor = contentColor, containerColor = containerColor)
+    }
+}
+

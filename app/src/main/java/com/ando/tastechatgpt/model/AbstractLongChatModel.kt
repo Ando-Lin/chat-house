@@ -1,10 +1,7 @@
 package com.ando.tastechatgpt.model
 
-import com.ando.tastechatgpt.data.api.ChatCatApi
-import com.ando.tastechatgpt.domain.pojo.RoleMessage
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import kotlinx.coroutines.flow.Flow
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
@@ -20,7 +17,7 @@ abstract class AbstractLongChatModel : LongChatModel {
         get() = Retrofit.Builder()
             .baseUrl(baseUrl)
             .addConverterFactory(MoshiConverterFactory.create(moshi).asLenient())
-//            .addConverterFactory(ScalarsConverterFactory.create())
+            .addConverterFactory(ScalarsConverterFactory.create())
             .apply { httpClient?.let { this.client(it) } }
             .build()
 }

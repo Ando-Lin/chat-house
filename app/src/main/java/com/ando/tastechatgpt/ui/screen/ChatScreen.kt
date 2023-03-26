@@ -40,7 +40,7 @@ import com.ando.tastechatgpt.ui.screen.state.ChatMessageUiState
 import com.ando.tastechatgpt.ui.screen.state.ChatViewModel
 import kotlinx.coroutines.launch
 
-
+//TODO: bug: 获取lazyPagingItems.peek(0)时虽然pagingSource刷新了，但可能获取的是上一个的pagingSource的值
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
@@ -63,6 +63,7 @@ fun ChatScreen(
     LaunchedEffect(uiMessage) {
         if (uiMessage.isBlank()) return@LaunchedEffect
         SnackbarUI.showMessage(uiMessage)
+        viewModel.resetMessage()
     }
 
 
@@ -134,9 +135,7 @@ fun ChatScreen(
             enableResend = longPressedMessageUiState?.uid == screenUiState.myId,
             onClickResend = {
                 viewModel.resendMessage(
-                    msgId = longPressedMessageUiState!!.id,
-                    previousMsgTime = lazyPagingItems.peek(0)?.timestamp,
-                    msg = longPressedMessageUiState!!.text
+                    msgId = longPressedMessageUiState!!.id
                 )
                 dialogForOpVisible = false
             },
@@ -171,13 +170,15 @@ fun ChatScreen(
         SimpleAlertDialog(
             dialogVisible = dialogForWarning,
             onCancel = { dialogForWarning = false },
-            onConfirm = { viewModel.clearConversation() },
+            onConfirm = {
+                dialogForWarning = false
+                viewModel.clearConversation()
+            },
             title = { Text(text = stringResource(id = R.string.confirm_delete)) }
         ) {
             Text(text = stringResource(id = R.string.warning_clear_conversation))
         }
     }
-
 
 
 }
@@ -255,7 +256,7 @@ fun ChatArea(
     //查看最新消息时
     //TODO: 导航到最新消息的浮动按钮
     val isLookAtLatest by remember {
-        derivedStateOf { lazyColumnState.firstVisibleItemIndex <= 1 }
+        derivedStateOf { lazyColumnState.firstVisibleItemIndex <= 2 }
     }
     LaunchedEffect(pagingItems.loadState.append) {
         Log.i(TAG, "ChatArea: ${pagingItems.loadState.append}")

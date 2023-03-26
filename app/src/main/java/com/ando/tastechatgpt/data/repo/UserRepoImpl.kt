@@ -1,11 +1,10 @@
 package com.ando.tastechatgpt.data.repo
 
 import androidx.paging.PagingSource
-import com.ando.tastechatgpt.constant.HUMAN_UID
+import com.ando.tastechatgpt.constant.MY_UID
 import com.ando.tastechatgpt.data.source.local.UserLocalDataSource
 import com.ando.tastechatgpt.di.IoDispatcher
 import com.ando.tastechatgpt.domain.entity.UserEntity
-import com.ando.tastechatgpt.domain.pojo.User
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -24,14 +23,14 @@ class UserRepoImpl @Inject constructor(
     init {
         external.launch {
             //检查是否存在一号用户，即用户本人
-            fetchById(HUMAN_UID).collect {
+            fetchById(MY_UID).collect {
                 if (it != null) {
                     return@collect
                 }
                 //不存在则添加一号用户
                 save(
                     UserEntity(
-                        id = HUMAN_UID,
+                        id = MY_UID,
                         name = "用户",
                         avatar = null,
                         description = "",
@@ -42,7 +41,7 @@ class UserRepoImpl @Inject constructor(
         }
         external.launch {
             //添加角色设计师
-            val designerId = HUMAN_UID+1
+            val designerId = MY_UID+1
             fetchById(designerId).collect{
                 if (it != null) {
                     return@collect
@@ -85,7 +84,7 @@ class UserRepoImpl @Inject constructor(
         }
     }
 
-    override suspend fun update(user: User): Result<Unit> {
+    override suspend fun update(user: UserEntity): Result<Unit> {
         return withContext(external.coroutineContext + ioDispatcher) {
             kotlin.runCatching {
                 localDataSource.update(user)

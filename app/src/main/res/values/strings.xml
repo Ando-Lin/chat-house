@@ -57,4 +57,6 @@
     <string name="confirm_delete">确认是否清除</string>
     <string name="send_failure">发送失败</string>
     <string name="reminder">提醒</string>
+    <string name="openai_api_key">OpenAI API-Key</string>
+    <string name="clear">清除</string>
 </resources>

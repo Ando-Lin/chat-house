@@ -31,7 +31,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -46,6 +45,8 @@ import com.ando.tastechatgpt.ui.component.SnackbarUI
 import com.ando.tastechatgpt.ui.component.TPopup
 import com.ando.tastechatgpt.ui.screen.state.RoleListScreenViewModel
 import com.ando.tastechatgpt.ui.theme.TasteChatGPTTheme
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 
@@ -72,29 +73,14 @@ fun RoleListScreen(
     val lazyPagingItems = uiState.pagingDataFlow.collectAsLazyPagingItems()
     val message = viewModel.screenUiState.message
     val hapticFeedback = LocalHapticFeedback.current
-    Log.i(TAG, "RoleListScreen: ")
-    when (lazyPagingItems.loadState.append) {
-        LoadState.Loading -> {
-            Log.i(TAG, "RoleListScreen: loadingState.Loading")
-        }
-        is LoadState.Error -> {
-            Log.i(TAG, "RoleListScreen: loadingState.Error")
-        }
-        else -> {   //没有加载时
-            //当查看最新消息时自动滚动最新消息
-            //如果页面停留在最新的前两项则自动滚动到最新的一项
-            Log.i(TAG, "RoleListScreen: loadingState=${lazyPagingItems.loadState}")
-        }
-    }
-
+    val refreshState = !lazyPagingItems.loadState.append.endOfPaginationReached
+    Log.i(TAG, "RoleListScreen: loadState = ${lazyPagingItems.loadState}")
 
     LaunchedEffect(message) {
         if (message.isBlank()) return@LaunchedEffect
         SnackbarUI.showMessage(message = message)
     }
-    LaunchedEffect(Unit){
-        lazyPagingItems.refresh()
-    }
+
 
     SimpleAlertDialog(
         dialogVisible = dialogVisible,
@@ -113,60 +99,62 @@ fun RoleListScreen(
             )
         }
     ) { paddingValues ->
-        ScreenContent(
-            lazyPagingItems = lazyPagingItems,
-            modifier = Modifier
-                .padding(paddingValues)
-                .fillMaxSize(),
-            onClickRoleItem = {
-                navigationAction(
-                    ChatScreenTabDestination.routeWithArg(it)
-                )
-            },
-            onClickAvatar = {
-                navigationAction(
-                    ProfileScreenDestination.routeWithArg(it)
-                )
-            },
-            onLongPressRoleItem = { o, u ->
-                offset = IntOffset(o.x.toInt(), o.y.toInt())
-                uid = u
-                popupVisible = true
-                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-            },
-            popup = {
-                TPopup(
-                    visible = popupVisible,
-                    offset = offset,
-                    onDismissRequest = { popupVisible = false }
-                ) {
-                    val modifier = Modifier
-                        .width(120.dp)
-                        .wrapContentHeight()
-                        .padding(vertical = 7.dp)
+        SwipeRefresh(state = rememberSwipeRefreshState(refreshState), onRefresh = { lazyPagingItems.refresh()}) {
+            ScreenContent(
+                lazyPagingItems = lazyPagingItems,
+                modifier = Modifier
+                    .padding(paddingValues)
+                    .fillMaxSize(),
+                onClickRoleItem = {
+                    navigationAction(
+                        ChatScreenTabDestination.routeWithArg(it)
+                    )
+                },
+                onClickAvatar = {
+                    navigationAction(
+                        ProfileScreenDestination.routeWithArg(it)
+                    )
+                },
+                onLongPressRoleItem = { o, u ->
+                    offset = IntOffset(o.x.toInt(), o.y.toInt())
+                    uid = u
+                    popupVisible = true
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                },
+                popup = {
+                    TPopup(
+                        visible = popupVisible,
+                        offset = offset,
+                        onDismissRequest = { popupVisible = false }
+                    ) {
+                        val modifier = Modifier
+                            .width(120.dp)
+                            .wrapContentHeight()
+                            .padding(vertical = 7.dp)
 
-                    Text(
-                        text = stringResource(id = R.string.edit),
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .then(modifier)
-                            .clickable {
-                                popupVisible = false
-                                navigationAction(ProfileScreenDestination.routeWithArg(uid))
-                            }
-                    )
-                    if (uid == viewModel.screenUiState.myId) return@TPopup
-                    Text(
-                        text = stringResource(id = R.string.delete),
-                        color = MaterialTheme.colorScheme.error,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .then(modifier)
-                            .clickable { dialogVisible = true;popupVisible = false }
-                    )
+                        Text(
+                            text = stringResource(id = R.string.edit),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .then(modifier)
+                                .clickable {
+                                    popupVisible = false
+                                    navigationAction(ProfileScreenDestination.routeWithArg(uid))
+                                }
+                        )
+                        if (uid == viewModel.screenUiState.myId) return@TPopup
+                        Text(
+                            text = stringResource(id = R.string.delete),
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .then(modifier)
+                                .clickable { dialogVisible = true;popupVisible = false }
+                        )
+                    }
                 }
-            }
-        )
+            )
+        }
     }
 }
 

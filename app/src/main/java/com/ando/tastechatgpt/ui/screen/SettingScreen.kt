@@ -1,131 +1,133 @@
+@file:OptIn(
+    ExperimentalMaterial3Api::class, ExperimentalMaterial3Api::class,
+    ExperimentalMaterial3Api::class
+)
+
 package com.ando.tastechatgpt.ui.screen
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.FocusInteraction
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBackIos
-import androidx.compose.material.icons.filled.ArrowForwardIos
+import androidx.compose.material.icons.filled.Key
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.ando.tastechatgpt.R
 import com.ando.tastechatgpt.domain.pojo.*
-import com.ando.tastechatgpt.profile
-import com.ando.tastechatgpt.ui.component.DialogForStringInput
-import com.ando.tastechatgpt.ui.component.SimpleAlertDialog
-import com.ando.tastechatgpt.ui.component.SimpleTopBar
-import kotlinx.coroutines.launch
-
-
-private val settingGroup: List<SettingItem<*>> by lazy {
-    listOf(
-        NightModeSetting,
-        ApiKeySetting
-    )
-}
-
-@Composable
-fun SettingScreen(
-    backAction: () -> Unit,
-) {
-    val backgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
-    Surface(color = backgroundColor) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxSize()
-        ) {
-            SimpleTopBar(onBackClick = backAction, title = stringResource(id = R.string.setting))
-            val context = LocalContext.current
-            settingGroup.forEach { item ->
-                item.dataStore = context.profile
-                when (item.type) {
-                    SettingItem.Type.String -> {
-                        StringSetting(settingItem = item as BaseTypeSetting<String>)
-                    }
-                    else -> {}
-                }
-            }
-        }
-    }
-}
-
-
-
-
-@Composable
-fun PlainSettingRow(
-    modifier: Modifier = Modifier,
-    text: String,
-    onClick: () -> Unit,
-    content: @Composable RowScope.() -> Unit = {
-        Spacer(modifier = Modifier.weight(1f))
-        Icon(imageVector = Icons.Default.ArrowForwardIos, contentDescription = null, modifier = Modifier.size(20.dp) )
-    }
-) {
-    Surface(modifier = Modifier.clickable(onClick = onClick)) {
-        Row(
-            modifier = modifier
-                .padding(10.dp)
-                .wrapContentHeight()
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.Start,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = text,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            content()
-        }
-    }
-}
-
-
-
+import com.ando.tastechatgpt.ui.component.*
+import com.ando.tastechatgpt.ui.screen.state.SettingsScreenViewModel
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun StringSetting(
-    settingItem: BaseTypeSetting<String>,
+fun SettingScreen(
+    backAction: () -> Unit, viewModel: SettingsScreenViewModel = hiltViewModel()
 ) {
-    //配置里的原始值
-    val originText = settingItem.value.collectAsState(initial = "")
-    //弹窗可见性
-    var dialogVisible by remember {
-        mutableStateOf(false)
+    val backgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+    val originalApiKey = viewModel.apiKey.collectAsState()
+    val text = remember(originalApiKey) {
+        mutableStateOf(originalApiKey.value ?: "")
     }
-    //执行写入配置的协程scope
-    val scope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
+    val interactionSource = remember {
+        MutableInteractionSource()
+    }
+    LaunchedEffect(Unit) {
+        interactionSource.interactions.collect {
+            if (it is FocusInteraction.Unfocus) {
+                viewModel.writeToProfile(viewModel.key, text.value.trim())
+            }
+        }
+    }
+    Scaffold(
+        topBar = {
+            Surface(shadowElevation = 1.dp) {
+                SimpleTopBar(onBackClick = backAction, title = stringResource(id = R.string.setting))
+            }
+        },
+        modifier = Modifier.pointerInput(Unit) {
+            detectTapGestures { focusManager.clearFocus() }
+        }
+    ) { paddingValues ->
+        Surface(
+            color = backgroundColor, modifier = Modifier
+                .padding(paddingValues)
+                .fillMaxSize(),
+        ) {
+            ScreenContent(
+                text = text.value,
+                onTextChange = { text.value = it },
+                interactionSource = interactionSource,
+            )
+        }
+    }
+}
 
-    //显示设置信息
-    Surface {
-        PlainSettingRow(
-            text = stringResource(id = settingItem.nameResId) + ": ${originText.value}",
-            onClick = { dialogVisible = true },
-        )
+@Composable
+private fun ScreenContent(
+    modifier: Modifier = Modifier,
+    text: String,
+    onTextChange: (String) -> Unit,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() }
+) {
+    Column(modifier = modifier) {
+        Column(
+            horizontalAlignment = Alignment.Start,
+            modifier = modifier
+                .fillMaxWidth()
+                .wrapContentHeight(Alignment.Top)
+                .background(color = MaterialTheme.colorScheme.surface)
+                .padding(horizontal = 20.dp)
+        ) {
+            Row(modifier = Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) {
+                    Icon(imageVector = Icons.Default.Key, contentDescription = null)
+                }
+                Spacer(modifier = Modifier.width(6.dp))
+                //openai apikey
+                Text(
+                    text = stringResource(id = R.string.openai_api_key),
+                    style = MaterialTheme.typography.titleSmall,
+//                    modifier = Modifier.padding(top = 10.dp)
+                )
+            }
+            TTextField(
+                text = text,
+                onTextChange = onTextChange,
+                tip = "xxxxxxxxxxxxxxxxxxxxx",
+                colors = TTextFieldColors.defaultColors(
+                    containerColor = Color.Transparent,
+                    contentColor = MaterialTheme.colorScheme.onSurface.copy(0.7f)
+                ),
+                textStyle = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(vertical = 10.dp),
+                maxLines = 1,
+                interactionSource = interactionSource
+            )
+        }
     }
 
-    //弹窗写入
-    DialogForStringInput(
-        dialogVisible = dialogVisible,
-        onCancel = { dialogVisible = false },
-        onConfirm = {
-            scope.launch {
-            runCatching {
-                settingItem.onInputComplete(it)
-            }.onFailure { TODO("写入失败，弹出通知") }
-            dialogVisible = false
-        } },
-        initText = originText.value?:"",
-        label = stringResource(id = settingItem.nameResId),
-        placeholder = stringResource(id = R.string.input_on_here),
-        modifier = Modifier.fillMaxWidth()
-    )
+
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun Prev() {
+    val backgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+    Surface(color = backgroundColor, modifier = Modifier.fillMaxSize()) {
+        ScreenContent(text = "", onTextChange = {})
+    }
 }

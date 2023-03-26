@@ -13,7 +13,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.*
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.ando.tastechatgpt.MainScreenDestination
-import com.ando.tastechatgpt.constant.HUMAN_UID
+import com.ando.tastechatgpt.constant.MY_UID
 import com.ando.tastechatgpt.constant.PreferencesKey
 import com.ando.tastechatgpt.data.repo.ChatRepo
 import com.ando.tastechatgpt.data.repo.UserRepo
@@ -51,7 +51,7 @@ class ChatViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
     private val external: CoroutineScope
 ) : ViewModel() {
-    private val myId = HUMAN_UID
+    private val myId = MY_UID
 
     //从配置读取当前模型
     private val currentModelFlow: StateFlow<String> =
@@ -97,21 +97,23 @@ class ChatViewModel @Inject constructor(
             .filter {
                 it != null
             }
-            .transformLatest {
-                val uid = it!!
-                var chat = chatRepo.fetchChatById(uid).first()
-                if (chat == null) {
-                    chat = ChatEntity.individual(uid)
-                    chatRepo.saveChat(chat)
-                        .onSuccess { emit(chat) }
-                        .onFailure { updateUiMessage("创建对话失败: ${it.localizedMessage}") }
-                }else{
-                    emit(chat)
-                }
+            .transformLatest { uid ->
+                val flow = chatRepo.fetchChatById(uid!!)
+                    .transform {
+                        if (it == null) {
+                            val chat = ChatEntity.individual(uid)
+                            chatRepo.saveChat(chat)
+                                .onSuccess { emit(chat) }
+                                .onFailure { updateUiMessage("创建对话失败: ${it.localizedMessage}") }
+                        }else{
+                            emit(it)
+                        }
+                    }
+                emitAll(flow)
             }
             .stateIn(
                 viewModelScope,
-                SharingStarted.Lazily,
+                SharingStarted.Eagerly,
                 null
             )
 
@@ -182,6 +184,9 @@ class ChatViewModel @Inject constructor(
         }
     }
 
+    fun resetMessage() {
+        screenUiState = screenUiState.copy(message = "")
+    }
 
     /**
      * 更新当前模型
@@ -370,13 +375,12 @@ class ChatViewModel @Inject constructor(
     /**
      * 重发送消息
      */
-    fun resendMessage(
-        msgId: Int,
-        previousMsgTime: LocalDateTime?,
-        msg: String
-    ) {
-        this.deleteMessage(msgId)
-        this.sendMessage(msg, previousMsgTime)
+    fun resendMessage(msgId: Int) {
+        viewModelScope.launch {
+            val model = currentModelFlow.value
+            chatRepo.resendMessage(model, msgId)
+                .onFailure { updateUiMessage("重发消息失败：$it.l") }
+        }
     }
 
     /**
@@ -465,7 +469,7 @@ data class ChatMessageUiState(
 data class ChatScreenUiState(
     private val flowFlowPagingData: Flow<Flow<PagingData<ChatMessageUiState>>>,
     val message: String = "",
-    val myId: Int = HUMAN_UID,
+    val myId: Int = MY_UID,
     private val topBarUiStateState: State<ChatScreenTopBarUiState>,
     private val bottomBarUiStateState: State<ChatScreenBottomBarUiState>
 ) {

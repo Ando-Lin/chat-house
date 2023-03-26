@@ -1,6 +1,5 @@
 package com.ando.tastechatgpt.model
 
-import com.ando.tastechatgpt.constant.OPENAI_URL
 import com.ando.tastechatgpt.data.api.Authorization
 import com.ando.tastechatgpt.data.api.ChatGPTCompletionPara
 import com.ando.tastechatgpt.data.api.OpenAIApi
@@ -9,22 +8,41 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import okhttp3.OkHttpClient
 
-class OpenAIGPT3d5Model(
-    override val httpClient: OkHttpClient,
-) :AbstractLongChatModel() {
-    override val name: String = modelName
-    override val baseUrl: String = OPENAI_URL
+class OpenAIGPT3d5Model internal constructor(
+    override val baseUrl: String,
+    override val httpClient: OkHttpClient?,
+    private val needAPIKey: Boolean = true,
+) : AbstractLongChatModel(), RequireOpenAIAPIKey {
+    override val label: String = LABEL
     private val api = retrofit.create(OpenAIApi::class.java)
-
     override fun sendMessages(messages: List<RoleMessage>, para: ChatModel.Para?): Flow<String?> {
+        val apiKey = para?.apiKey
+        if (needAPIKey && apiKey.isNullOrBlank()) {
+            throw IllegalArgumentException("缺少APIKey")
+        }
+
         return flow {
-            val apiKey = para?.apiKey?:throw IllegalArgumentException("$name 模型必须包含apikey")
-            val response = api.queryChatGPT(Authorization(apiKey), ChatGPTCompletionPara(message=messages))
-            emit(response.choices[0].message.content)
+            val response = api.queryChatGPT(
+                Authorization(apiKey!!),
+                ChatGPTCompletionPara(messages = messages)
+            )
+            val body = response.body()
+            emit(body?.choices?.get(0)?.message?.content)
         }
     }
 
-    companion object{
-        const val modelName = "openai-gpt3.5"
+    companion object {
+        private const val TAG = "OpenAIGPT3d5Model"
+        const val  LABEL= "OpenAI"
+        private val cache = mutableMapOf<String, OpenAIGPT3d5Model>()
+        fun create(
+            baseUrl: String,
+            needAPIKey: Boolean = true,
+            httpClient: OkHttpClient? = null
+        ): OpenAIGPT3d5Model {
+            return cache.getOrPut(baseUrl) {
+                OpenAIGPT3d5Model(baseUrl, needAPIKey = needAPIKey, httpClient = httpClient)
+            }
+        }
     }
 }

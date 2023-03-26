@@ -8,6 +8,7 @@ import com.ando.tastechatgpt.domain.pojo.ChatMessage
 import com.ando.tastechatgpt.domain.pojo.PageQuery
 import kotlinx.coroutines.flow.Flow
 
+//TODO: 将发送消息的业务转移到worker中
 interface ChatRepo {
     val availableModelList: List<String>
 
@@ -28,16 +29,19 @@ interface ChatRepo {
     /**
      * 分页查询
      */
-    fun getPagingByCidAndUid(
+    fun getPagingByCid(
         chatId: Int,
-        uid: Int,
+        uid: Int? = null,
         pageQuery: PageQuery
     ): Flow<List<ChatMessageEntity>>
 
     suspend fun saveMessage(messageEntity: ChatMessageEntity): Result<Int>
     suspend fun deleteMessage(id: Int): Result<Unit>
     suspend fun updateMessage(id: Int, msg: String? = null, status: MessageStatus? = null): Result<Unit>
+
     suspend fun sendMessage(modelName: String, message: ChatMessage): Result<Int>
+
+    suspend fun resendMessage(modelName: String, messageId: Int): Result<Int>
 
     suspend fun unifyMessage(vararg id:Int, selected:Int?=null):Result<Unit>
 

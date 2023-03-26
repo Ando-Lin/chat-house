@@ -42,8 +42,9 @@ data class TextCompletionResponse(
 data class Usage(
     @Json(name = "prompt_tokens")
     val promptTokens: Int,
-
+    @Json(name = "completion_tokens")
     val completionTokens: Int,
+    @Json(name = "total_tokens")
     val totalTokens: Int
 )
 

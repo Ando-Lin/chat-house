@@ -93,7 +93,16 @@ class ProfileViewModel @Inject constructor(
                 updateTempUser(tempUser = lastUser)
             }
 
-            val result = userRepo.save(lastUser.toEntity())
+            val result = if (lastUser.id==0){
+                userRepo.save(lastUser.toEntity())
+                    .onSuccess {
+                        //更新id，防止多次保存新user
+                        lastUser = lastUser.copy(id = it)
+                        updateTempUser(lastUser)
+                    }
+            }else{
+                userRepo.update(lastUser.toEntity())
+            }
 
             result
                 .onFailure { updateMessage("更新用户时发生错误: ${it.message}") }
@@ -119,7 +128,7 @@ class ProfileViewModel @Inject constructor(
 
     private fun updateUser(user: UserDetail) {
         viewModelScope.launch {
-            userRepo.save(user.toEntity())
+            userRepo.update(user.toEntity())
                 .onFailure { updateMessage("更新用户时发生错误: ${it.message}") }
         }
     }

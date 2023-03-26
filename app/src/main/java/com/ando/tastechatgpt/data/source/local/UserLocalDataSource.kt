@@ -2,16 +2,11 @@ package com.ando.tastechatgpt.data.source.local
 
 import androidx.paging.PagingSource
 import com.ando.tastechatgpt.AppDataBase
-import com.ando.tastechatgpt.R
 import com.ando.tastechatgpt.data.source.UserDataSource
 import com.ando.tastechatgpt.data.source.local.dao.UserDao
-import com.ando.tastechatgpt.di.IoDispatcher
 import com.ando.tastechatgpt.domain.entity.UserEntity
 import com.ando.tastechatgpt.domain.pojo.IntId
-import com.ando.tastechatgpt.domain.pojo.User
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 class UserLocalDataSource @Inject constructor(
@@ -31,7 +26,7 @@ class UserLocalDataSource @Inject constructor(
         return userDao.insert(user).toInt()
     }
 
-    override suspend fun update(user: User){
+    override suspend fun update(user: UserEntity){
         userDao.update(user)
     }
 

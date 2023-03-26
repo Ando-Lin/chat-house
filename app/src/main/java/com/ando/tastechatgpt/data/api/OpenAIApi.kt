@@ -1,28 +1,13 @@
 package com.ando.tastechatgpt.data.api
 
-import android.graphics.ColorSpace
 import com.ando.tastechatgpt.domain.pojo.ChatGPTCompletionResponse
 import com.ando.tastechatgpt.domain.pojo.RoleMessage
-import com.ando.tastechatgpt.domain.pojo.TextCompletionResponse
-import com.squareup.moshi.Json
 import retrofit2.Response
 import retrofit2.http.Body
-import retrofit2.http.Field
-import retrofit2.http.FormUrlEncoded
 import retrofit2.http.Header
 import retrofit2.http.POST
 
 interface OpenAIApi {
-
-    /**
-     * @param authorization: 认证
-     * @param para: 参数
-     */
-    @POST("/v1/completions")
-    suspend fun query(
-        @Header("Authorization") authorization:Authorization,
-        @Body para: TextCompletionPara
-    ):TextCompletionResponse
 
 
     /**
@@ -33,7 +18,7 @@ interface OpenAIApi {
     suspend fun queryChatGPT(
         @Header("Authorization") authorization:Authorization,
         @Body para: ChatGPTCompletionPara
-    ):ChatGPTCompletionResponse
+    ):Response<ChatGPTCompletionResponse>
 }
 
 data class Authorization(
@@ -49,25 +34,6 @@ data class Authorization(
     }
 }
 
-/**
- * 参数
- * @param prompt: 提示或者上下文
- * @param maxTokens: 最大生成令牌数。即生成文本长度上限
- * @param n: 生成的候选数
- * @param temperature: 控制生成结果的随机性。值越高，生成结果越随机。
- * @param topP: 控制 API 生成的概率分布。值越低，生成的结果将更加确定
- * @param stream: 控制 API 生成文本的模式。如果设置为 true，则 API 将生成一个生成流，可以逐步生成文本。
- * @param model: 使用的文本模型
- */
-data class TextCompletionPara(
-    val prompt: String,
-    val maxTokens:Int = 2048,
-    val temperature: Double = 0.5,
-    val model:String = "text-davinci-003",
-//    val n:Int = 1,
-//    val topP: Double = 1.0,
-//    val stream: Boolean = false,
-)
 
 /**
  * chatgpt api所需参数
@@ -83,24 +49,21 @@ data class TextCompletionPara(
  * 在数学上，偏差被添加到抽样前由模型生成的对数中。每个模型的确切效果会有所不同，但介于-1和1之间的值应该会减少或增加选择的可能性;像-100或100这样的值应该导致相关令牌的禁止或排他选择。
  */
 data class ChatGPTCompletionPara(
-    val model: ModelType = ModelType.GPT_3_5_TURBO,
-    val message: List<RoleMessage>,
-    val temperature: Double = 1.0,
-    val topP: Double = 1.0,
-    val n:Int = 1,
-    val stop:Int? = null,
-    val stream: Boolean = false,
-    val presencePenalty:Double = 0.0,
-    val frequencyPenalty:Double = 0.0,
-    val logitBias:Map<String,String>?=null,
+    val model: String = GPT_3d5_TURBO,
+    val messages: List<RoleMessage>,
+//    val temperature: Double = 1.0,
+//    val topP: Double = 1.0,
+//    val n:Int = 1,
+//    val stop:Int? = null,
+//    val stream: Boolean = false,
+//    val presencePenalty:Double = 0.0,
+//    val frequencyPenalty:Double = 0.0,
+//    val logitBias:Map<String,String>?=null,
 
     ){
-    enum class ModelType(private val value:String){
-        GPT_3_5_TURBO("gpt-3.5-turbo"),
-        GPT_3_5_TURBO_0301("gpt-3.5-turbo-0301");
 
-        override fun toString(): String {
-            return value
-        }
+    companion object{
+        const val GPT_3d5_TURBO = "gpt-3.5-turbo"
+        const val GPT_3d5_TURBO_0301 = "gpt-3.5-turbo-0301"
     }
 }

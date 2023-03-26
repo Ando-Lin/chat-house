@@ -21,11 +21,15 @@ class ChatLocalDataSource @Inject constructor(db: AppDataBase) : ChatDataSource 
     }
 
     override fun getMessagePagingSourceByChatId(chatId: Int): PagingSource<Int, ChatMessageEntity> {
-        return chatDao.loadPagingSourceByChatId(chatId = chatId)
+        return chatDao.loadMessagePagingSourceByChatId(chatId = chatId)
     }
 
     override fun getLatestMessageByChatId(chatId: Int): Flow<ChatMessageEntity?> {
-        return chatDao.loadLatestByChatId(chatId = chatId)
+        return chatDao.loadLatestMessageByChatId(chatId = chatId)
+    }
+
+    override fun getMessageById(messageId: Int): Flow<ChatMessageEntity?> {
+        return chatDao.loadMessageById(messageId)
     }
 
 
@@ -37,9 +41,9 @@ class ChatLocalDataSource @Inject constructor(db: AppDataBase) : ChatDataSource 
         //pageQuery的order未实现
         val offset =  (pageQuery.page - 1)*pageQuery.pageSize
         return if (uid==null){
-            chatDao.loadPagingByCid(chatId = chatId, pageSize = pageQuery.pageSize, pageOffset = offset)
+            chatDao.loadPagingMessageByCid(chatId = chatId, pageSize = pageQuery.pageSize, pageOffset = offset)
         }else{
-            chatDao.loadPagingByCidAndUid(
+            chatDao.loadPagingMessageByCidAndUid(
                 chatId = chatId,
                 uid = uid,
                 pageSize = pageQuery.pageSize,
@@ -50,11 +54,11 @@ class ChatLocalDataSource @Inject constructor(db: AppDataBase) : ChatDataSource 
 
 
     override suspend fun insertMessage(chatMessageEntity: ChatMessageEntity): Int {
-        return chatDao.insert(chatMessageEntity)[0].toInt()
+        return chatDao.insertMessage(chatMessageEntity)[0].toInt()
     }
 
     override suspend fun deleteMessage(id: Int) {
-        chatDao.delete(IntId(id = id))
+        chatDao.deleteMessageById(IntId(id = id))
     }
 
     override suspend fun unifyMessage(vararg id: Int, selected: Int?) {
@@ -65,7 +69,7 @@ class ChatLocalDataSource @Inject constructor(db: AppDataBase) : ChatDataSource 
 
     override suspend fun updateMessage(id: Int, status: MessageStatus?, msg: String?, selected: Int?) {
         status?.let {
-            chatDao.updateStatus(id, it)
+            chatDao.updateMessageStatus(id, it)
         }
         msg?.let {
             chatDao.updateMessage(id, it)
@@ -76,7 +80,7 @@ class ChatLocalDataSource @Inject constructor(db: AppDataBase) : ChatDataSource 
     }
 
     override suspend fun shiftStatus(originStatus: MessageStatus, targetStatus: MessageStatus) {
-        chatDao.shiftStatus(originStatus, targetStatus)
+        chatDao.shiftMessageStatus(originStatus, targetStatus)
     }
 
     override fun getTotalByCid(chatId: Int, uid: Int?):Flow<Int> {

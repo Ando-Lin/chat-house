@@ -11,6 +11,7 @@ interface ChatDataSource {
     fun getRecentChatPagingSource():PagingSource<Int, ChatMessageEntity>
     fun getMessagePagingSourceByChatId(chatId: Int): PagingSource<Int, ChatMessageEntity>
     fun getLatestMessageByChatId(chatId: Int): Flow<ChatMessageEntity?>
+    fun getMessageById(messageId:Int):Flow<ChatMessageEntity?>
     fun getMessagePagingByCid(chatId: Int, uid: Int?=null, pageQuery: PageQuery):Flow<List<ChatMessageEntity>>
     suspend fun insertMessage(chatMessageEntity: ChatMessageEntity): Int
     suspend fun deleteMessage(id: Int)

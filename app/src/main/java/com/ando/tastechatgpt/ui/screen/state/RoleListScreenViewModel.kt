@@ -6,7 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.*
-import com.ando.tastechatgpt.constant.HUMAN_UID
+import com.ando.tastechatgpt.constant.MY_UID
 import com.ando.tastechatgpt.data.repo.UserRepo
 import com.ando.tastechatgpt.domain.entity.UserEntity
 import com.ando.tastechatgpt.domain.entity.toUser
@@ -53,5 +53,5 @@ class RoleListScreenViewModel @Inject constructor(
 data class RoleListScreenUiState(
     val pagingDataFlow: Flow<PagingData<User>>,
     val message: String = "",
-    val myId: Int = HUMAN_UID
+    val myId: Int = MY_UID
 )
