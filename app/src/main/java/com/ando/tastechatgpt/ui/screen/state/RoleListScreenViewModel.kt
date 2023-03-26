@@ -39,8 +39,8 @@ class RoleListScreenViewModel @Inject constructor(
     fun delete(uid: Int) {
         viewModelScope.launch {
             userRepo.deleteById(uid)
-                .onFailure { updateMessage("删除用户失败${it.message}") }
-                .onSuccess { updateMessage("成功删除用户") }
+                .onFailure { updateMessage("删除角色失败：${it.localizedMessage}") }
+                .onSuccess { updateMessage("删除角色成功") }
         }
     }
 

@@ -104,7 +104,7 @@ fun ChatScreenBottomBar(
                 showButton = !com,
                 reverseLayout = true,
                 modifier = Modifier
-                    .withCondition(!com and isRightFocused) {
+                    .withCondition(!com && isRightFocused) {
                         size(0.dp)
                     }
                     .withCondition(com) {
@@ -122,7 +122,7 @@ fun ChatScreenBottomBar(
             onTextChange = onTextChange,
             interactionSource = rightInteractionSource,
             modifier = Modifier
-                .withCondition(!com and isLeftFocused) {
+                .withCondition(!com && isLeftFocused) {
                     size(0.dp)
                 }
                 .withCondition(com) {

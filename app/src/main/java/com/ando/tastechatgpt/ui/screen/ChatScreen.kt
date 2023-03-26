@@ -7,7 +7,6 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -19,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.*
@@ -40,7 +38,6 @@ import com.ando.tastechatgpt.ui.screen.state.ChatMessageUiState
 import com.ando.tastechatgpt.ui.screen.state.ChatViewModel
 import kotlinx.coroutines.launch
 
-//TODO: bug: 获取lazyPagingItems.peek(0)时虽然pagingSource刷新了，但可能获取的是上一个的pagingSource的值
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
@@ -86,7 +83,6 @@ fun ChatScreen(
         },
         bottomBar = {
             Surface(
-//                modifier = Modifier.heightIn(min = 70.dp),
                 shadowElevation = 2.dp
             ) {
                 ChatScreenExtendedBottomBar(
@@ -194,52 +190,40 @@ private fun DialogForOperationItem(
     onClickDelete: () -> Unit,
     onClickEdit: () -> Unit
 ) {
+    val itemModifier = Modifier.width(300.dp)
     TDialog(dialogVisible = dialogVisible, onDismissRequest = onDismissRequest) {
         if (enableResend) {
-            ClickableIconText(
+            ClickableIconTextListItem(
                 text = stringResource(id = R.string.resend),
                 icon = Icons.Default.Refresh,
-                onClick = onClickResend
+                onClick = onClickResend,
+                modifier = itemModifier
             )
         }
-        ClickableIconText(
+        ClickableIconTextListItem(
             text = stringResource(id = R.string.edit),
             icon = Icons.Default.Edit,
-            onClick = onClickEdit
+            onClick = onClickEdit,
+            modifier = itemModifier
         )
-        ClickableIconText(
+        ClickableIconTextListItem(
             text = stringResource(id = R.string.copy),
             icon = Icons.Default.ContentCopy,
-            onClick = onClickCopy
+            onClick = onClickCopy,
+            modifier = itemModifier
         )
-        ClickableIconText(
+        ClickableIconTextListItem(
             text = stringResource(id = R.string.delete),
             icon = Icons.Default.Delete,
             contentColor = MaterialTheme.colorScheme.error,
-            onClick = onClickDelete
+            onClick = onClickDelete,
+            modifier = itemModifier
         )
     }
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ClickableIconText(
-    text: String,
-    icon: ImageVector,
-    contentColor: Color = LocalContentColor.current,
-    onClick: () -> Unit
-) {
-    ListItem(
-        headlineText = {
-            Text(text = text, color = contentColor)
-        },
-        leadingContent = {
-            Icon(imageVector = icon, contentDescription = null, tint = contentColor)
-        },
-        modifier = Modifier.clickable(onClick = onClick)
-    )
-}
+
 
 
 @Composable
@@ -316,13 +300,13 @@ fun SimpleMessage(
     //头像大小
     val avatarSize = 40.dp
     //根据isMe调整对齐。手动调整布局防止子组件发生意料之外的情况
-    val alignment = if (isMe) Alignment.End else Alignment.Start
+//    val alignment = if (isMe) Alignment.End else Alignment.Start
     //头像外框颜色
     var borderColor = colorScheme.secondary
     if (isMe) {
         borderColor = colorScheme.primary
     }
-    Column(horizontalAlignment = alignment, modifier = modifier) {
+    Column(modifier = modifier) {
         //显示时间
         if (showTime) {
             Box(
@@ -338,33 +322,29 @@ fun SimpleMessage(
                 )
             }
         }
-        LazyRow(
-            modifier = Modifier,
-            horizontalArrangement = Arrangement.Start,
-            verticalAlignment = Alignment.Top,
-            reverseLayout = isMe
-        ) {
-            item {
-                //头像
-                AvatarImage(
-                    model = messageUiState.avatar,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(avatarSize)
-                        .clip(CircleShape)
-                        .border(
-                            width = 1.6.dp, color = borderColor, shape = CircleShape
-                        )
-                        .border(
-                            width = 3.2.dp,
-                            color = colorScheme.surface,
-                            shape = CircleShape
-                        )
-                        .background(color = Color.White)
-                        .clickable(onClick = onClickAvatar)
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                //聊天气泡内容
+
+        ReversibleRow(reverseLayout = isMe, horizontalArrangement = Arrangement.Start, verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
+            //头像
+            AvatarImage(
+                model = messageUiState.avatar,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(avatarSize)
+                    .clip(CircleShape)
+                    .border(
+                        width = 1.6.dp, color = borderColor, shape = CircleShape
+                    )
+                    .border(
+                        width = 3.2.dp,
+                        color = colorScheme.surface,
+                        shape = CircleShape
+                    )
+                    .background(color = Color.White)
+                    .clickable(onClick = onClickAvatar)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            //聊天气泡内容
+            BoxWithConstraints {
                 ExtendedBubbleText(
                     uiState = messageUiState.bubbleTextUiState,
                     onLongClick = onLongClick,
@@ -374,19 +354,18 @@ fun SimpleMessage(
                             messageUiState.status == MessageStatus.Sending,
                             Modifier.breathingLight(rememberBreathingLightState())
                         )
-                        .sizeIn(
-                            minHeight = avatarSize, minWidth = 0.dp, maxWidth = 240.dp
-                        )
+                        .heightIn(min = avatarSize)
+                        .widthIn(max = this.maxWidth-avatarSize-10.dp)
                 )
-                if (messageUiState.status == MessageStatus.Failed) {
-                    Box(contentAlignment = Alignment.BottomStart) {
-                        Text(
-                            text = stringResource(id = R.string.send_failure),
-                            color = colorScheme.error,
-                            style = MaterialTheme.typography.labelMedium
-                        )
-                    }
-                }
+            }
+
+            if (messageUiState.status == MessageStatus.Failed) {
+                Text(
+                    text = stringResource(id = R.string.send_failure),
+                    color = colorScheme.error,
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.align(Alignment.Bottom)
+                )
             }
         }
     }

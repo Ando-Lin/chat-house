@@ -23,7 +23,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import com.ando.tastechatgpt.ext.toAnnotatedString
 import com.ando.tastechatgpt.ext.withMutableInteractionSource
 
@@ -33,8 +32,9 @@ data class BubbleTextUiState(
     val selected: Boolean,
     private val editModeState: State<Boolean>,
     private val multiSelectModeState: State<Boolean>
-){
+) {
     internal var checked by mutableStateOf(false)
+
     @Composable
     fun checked() = rememberSaveable() { mutableStateOf(false) }
     val editMode: Boolean by editModeState
@@ -80,8 +80,8 @@ fun ExtendedBubbleText(
     val (bubbleColor, textColor) = bubbleTextColor(uiState = uiState)
     var checked by uiState.checked()
     //关闭多选时取消checked
-    LaunchedEffect(uiState.multiSelectMode){
-        if (!uiState.multiSelectMode){
+    LaunchedEffect(uiState.multiSelectMode) {
+        if (!uiState.multiSelectMode) {
             checked = false
         }
     }
@@ -90,36 +90,19 @@ fun ExtendedBubbleText(
         mutableStateOf(true)
     }
     //当选择变化是应取消checked
-    LaunchedEffect(uiState.selected){
+    LaunchedEffect(uiState.selected) {
         //防止无条件重组的干扰
-        if(!firstCompose.value){
+        if (!firstCompose.value) {
             checked = false
         }
     }
-    LaunchedEffect(Unit){
+    LaunchedEffect(Unit) {
         firstCompose.value = false
     }
 
+
+
     Box {
-
-        AnimatedVisibility(visible = checked, modifier = Modifier
-            .align(Alignment.Center)
-            .zIndex(1f)) {
-            Box(
-                modifier = Modifier
-                    .size(width = 65.dp, height = 40.dp)
-                    .shadow(elevation = 3.dp, shape = RoundedCornerShape(100))
-                    .background(
-                        color = MaterialTheme.colorScheme.surface,
-                        shape = RoundedCornerShape(100)
-                    )
-                    .padding(5.dp),
-                contentAlignment = Alignment.Center
-            ){
-                Icon(imageVector = Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-            }
-        }
-
 
         BubbleText(
             modifier = modifier,
@@ -134,6 +117,29 @@ fun ExtendedBubbleText(
             }
         )
 
+
+        AnimatedVisibility(
+            visible = checked, modifier = Modifier
+                .align(Alignment.Center)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(width = 65.dp, height = 40.dp)
+                    .shadow(elevation = 3.dp, shape = RoundedCornerShape(100))
+                    .background(
+                        color = MaterialTheme.colorScheme.surface,
+                        shape = RoundedCornerShape(100)
+                    )
+                    .padding(5.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
 
     }
 }
@@ -172,11 +178,8 @@ fun BubbleText(
                     onLongPress = {
                         onLongClick()
                     },
-                    onTap = { pos ->
+                    onTap = {
                         onClick()
-                        layoutResult.value?.let { layout ->
-                            onClickText(layout.getOffsetForPosition(pos))
-                        }
                     },
                     onPress = { withMutableInteractionSource(it, interactionSource) }
                 )
@@ -185,7 +188,13 @@ fun BubbleText(
         Text(text = text,
             modifier = Modifier
                 .padding(16.dp)
-                .wrapContentSize(),
+                .pointerInput(Unit) {
+                    detectTapGestures {
+                        layoutResult.value?.let { layout ->
+                            onClickText(layout.getOffsetForPosition(it))
+                        }
+                    }
+                },
             style = MaterialTheme.typography.bodyLarge.copy(
                 color = textColor, textAlign = TextAlign.Start
             ),

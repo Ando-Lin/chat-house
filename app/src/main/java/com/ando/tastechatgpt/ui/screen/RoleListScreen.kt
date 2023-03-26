@@ -6,12 +6,13 @@ import android.util.Log
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.*
@@ -25,7 +26,6 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
@@ -39,10 +39,8 @@ import com.ando.tastechatgpt.ChatScreenTabDestination
 import com.ando.tastechatgpt.ProfileScreenDestination
 import com.ando.tastechatgpt.R
 import com.ando.tastechatgpt.domain.pojo.User
-import com.ando.tastechatgpt.ui.component.AvatarImage
-import com.ando.tastechatgpt.ui.component.SimpleAlertDialog
-import com.ando.tastechatgpt.ui.component.SnackbarUI
-import com.ando.tastechatgpt.ui.component.TPopup
+import com.ando.tastechatgpt.ext.withMutableInteractionSource
+import com.ando.tastechatgpt.ui.component.*
 import com.ando.tastechatgpt.ui.screen.state.RoleListScreenViewModel
 import com.ando.tastechatgpt.ui.theme.TasteChatGPTTheme
 import com.google.accompanist.swiperefresh.SwipeRefresh
@@ -85,7 +83,7 @@ fun RoleListScreen(
     SimpleAlertDialog(
         dialogVisible = dialogVisible,
         onCancel = { dialogVisible = false },
-        onConfirm = { viewModel.delete(uid);dialogVisible=false }
+        onConfirm = { viewModel.delete(uid);dialogVisible = false }
     ) {
         Text(text = stringResource(R.string.ask_for_delete))
     }
@@ -99,7 +97,9 @@ fun RoleListScreen(
             )
         }
     ) { paddingValues ->
-        SwipeRefresh(state = rememberSwipeRefreshState(refreshState), onRefresh = { lazyPagingItems.refresh()}) {
+        SwipeRefresh(
+            state = rememberSwipeRefreshState(refreshState),
+            onRefresh = { lazyPagingItems.refresh() }) {
             ScreenContent(
                 lazyPagingItems = lazyPagingItems,
                 modifier = Modifier
@@ -121,41 +121,40 @@ fun RoleListScreen(
                     popupVisible = true
                     hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                 },
-                popup = {
-                    TPopup(
-                        visible = popupVisible,
-                        offset = offset,
-                        onDismissRequest = { popupVisible = false }
-                    ) {
-                        val modifier = Modifier
-                            .width(120.dp)
-                            .wrapContentHeight()
-                            .padding(vertical = 7.dp)
-
-                        Text(
-                            text = stringResource(id = R.string.edit),
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier
-                                .then(modifier)
-                                .clickable {
-                                    popupVisible = false
-                                    navigationAction(ProfileScreenDestination.routeWithArg(uid))
-                                }
-                        )
-                        if (uid == viewModel.screenUiState.myId) return@TPopup
-                        Text(
-                            text = stringResource(id = R.string.delete),
-                            color = MaterialTheme.colorScheme.error,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier
-                                .then(modifier)
-                                .clickable { dialogVisible = true;popupVisible = false }
-                        )
-                    }
-                }
             )
         }
     }
+
+    TDialog(dialogVisible = popupVisible, onDismissRequest = { popupVisible = false }) {
+        val modifier = Modifier
+            .padding(vertical = 7.dp)
+            .width(220.dp)
+            .wrapContentHeight()
+
+        ClickableIconTextListItem(
+            text = stringResource(id = R.string.edit),
+            icon = Icons.Default.Edit,
+            onClick = {
+                popupVisible = false
+                navigationAction(ProfileScreenDestination.routeWithArg(uid))
+            },
+            modifier = modifier
+        )
+
+        if (uid == viewModel.screenUiState.myId) return@TDialog
+
+        ClickableIconTextListItem(
+            text = stringResource(id = R.string.delete),
+            icon = Icons.Default.Delete,
+            onClick = {
+                dialogVisible = true
+                popupVisible = false
+            },
+            contentColor = MaterialTheme.colorScheme.error,
+            modifier = modifier
+        )
+    }
+
 }
 
 @Composable
@@ -165,7 +164,6 @@ private fun ScreenContent(
     onClickAvatar: (uid: Int) -> Unit,
     onClickRoleItem: (uid: Int) -> Unit,
     onLongPressRoleItem: (offset: Offset, uid: Int) -> Unit,
-    popup: @Composable () -> Unit,
 ) {
     LazyColumn(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -173,7 +171,7 @@ private fun ScreenContent(
             .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape),
         contentPadding = PaddingValues(vertical = 5.dp)
     ) {
-        items(items = lazyPagingItems, key = {it.id}) {user ->
+        items(items = lazyPagingItems, key = { it.id }) { user ->
             val interactionSource = remember { MutableInteractionSource() }
             if (user != null) {
                 ListItem(
@@ -211,20 +209,11 @@ private fun ScreenContent(
                                 onLongPress = { onLongPressRoleItem(it, user.id) },
                                 onTap = { onClickRoleItem(user.id) },
                                 onPress = {
-                                    val press = PressInteraction.Press(it)
-                                    interactionSource.emit(press)
-                                    val isRelease = tryAwaitRelease()
-                                    if (isRelease) {
-                                        interactionSource.emit(PressInteraction.Release(press))
-                                    } else {
-                                        interactionSource.emit(PressInteraction.Cancel(press))
-                                    }
+                                    withMutableInteractionSource(it, interactionSource)
                                 }
                             )
                         },
                 )
-
-                popup()
             }
         }
     }
@@ -294,7 +283,6 @@ fun RoleListScreenPrev() {
                     Log.i(TAG, "RoleListScreenPrev: onClickRoleItem: $it")
                 },
                 onLongPressRoleItem = { offset, uid -> },
-                popup = {}
             )
 
         }

@@ -2,6 +2,7 @@ package com.ando.tastechatgpt.data.api
 
 import com.ando.tastechatgpt.domain.pojo.ChatGPTCompletionResponse
 import com.ando.tastechatgpt.domain.pojo.RoleMessage
+import com.squareup.moshi.Json
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.Header
@@ -51,16 +52,19 @@ data class Authorization(
 data class ChatGPTCompletionPara(
     val model: String = GPT_3d5_TURBO,
     val messages: List<RoleMessage>,
-//    val temperature: Double = 1.0,
-//    val topP: Double = 1.0,
-//    val n:Int = 1,
-//    val stop:Int? = null,
-//    val stream: Boolean = false,
-//    val presencePenalty:Double = 0.0,
-//    val frequencyPenalty:Double = 0.0,
-//    val logitBias:Map<String,String>?=null,
-
-    ){
+    val temperature: Double = 1.0,
+    @Json(name = "top_p")
+    val topP: Double = 1.0,
+    val n:Int = 1,
+    val stop:Int? = null,
+    val stream: Boolean = false,
+    @Json(name = "presence_penalty")
+    val presencePenalty:Double = 0.0,
+    @Json(name = "frequency_penalty")
+    val frequencyPenalty:Double = 0.0,
+    @Json(name = "logit_bias")
+    val logitBias:Map<String,String>?=null,
+){
 
     companion object{
         const val GPT_3d5_TURBO = "gpt-3.5-turbo"

@@ -33,7 +33,7 @@ fun LocalDateTime.formatByNow(context: Context): String {
         DateUtils.FORMAT_ABBREV_ALL or DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME or DateUtils.FORMAT_NO_NOON_MIDNIGHT
     flags = when {
         //判断是否跨年，是则显示年
-        //判断是否跨月，是则显示月份
+        //判断是否跨日，是则显示日月份
         //判断是否是一天内，是则显示时间
         now.year - this.year > 0 -> {
             flags

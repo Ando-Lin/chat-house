@@ -12,6 +12,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBackIos
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -54,7 +55,7 @@ fun SettingScreen(
     Scaffold(
         topBar = {
             Surface(shadowElevation = 1.dp) {
-                SimpleTopBar(onBackClick = backAction, title = stringResource(id = R.string.setting))
+                TopBar(onClickBack = backAction, title = stringResource(id = R.string.setting))
             }
         },
         modifier = Modifier.pointerInput(Unit) {
@@ -73,6 +74,24 @@ fun SettingScreen(
             )
         }
     }
+}
+
+
+@Composable
+private fun TopBar(
+    onClickBack: ()->Unit,
+    title:String
+) {
+    CenterAlignedTopAppBar(
+        title = {
+            Text(text = title, style = MaterialTheme.typography.titleMedium)
+        },
+        navigationIcon = {
+            IconButton(onClick = onClickBack) {
+                Icon(imageVector = Icons.Default.ArrowBackIos, contentDescription = null)
+            }
+        }
+    )
 }
 
 @Composable

@@ -10,9 +10,15 @@ import java.util.concurrent.atomic.AtomicInteger
 /**
  * 偏好我的策略。只收集ai固定条目消息和我的所有消息
  */
-class PreferMeCarryMessageStrategy(val remainAIMessage:Int = 3) : StatefulCarryMessageStrategy {
+class PreferMeCarryMessageStrategy: MutableStatefulCarryMessageStrategy<Int> {
+    override val defaultState: Int = 3
     private var hasCollectAiLastMessage: AtomicBoolean = AtomicBoolean(false)
-    private val counter: AtomicInteger = AtomicInteger(remainAIMessage)
+    private var remainAIMessage:Int = defaultState
+    private var counter: AtomicInteger = AtomicInteger(0)
+
+    override fun setState(value: Int) {
+        remainAIMessage = value
+    }
 
     override fun clearState() {
         hasCollectAiLastMessage.set(false)
@@ -24,7 +30,7 @@ class PreferMeCarryMessageStrategy(val remainAIMessage:Int = 3) : StatefulCarryM
         if (message.uid == chatContext.myUid)
             return true
         Log.i(TAG, "filter: counter = ${counter.get()}")
-        return counter.getAndDecrement() > 0
+        return counter.getAndIncrement() < remainAIMessage
     }
 
     companion object {

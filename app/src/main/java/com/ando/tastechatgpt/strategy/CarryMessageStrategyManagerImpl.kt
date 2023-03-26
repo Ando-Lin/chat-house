@@ -16,7 +16,8 @@ class CarryMessageStrategyManagerImpl : CarryMessageStrategyManager {
     }
 
     override fun filterBy(strategy: String): (ChatMessageEntity, ChatContext) -> Boolean {
-        return getInstance(strategy)::filter
+        val instance = getInstance(strategy)
+        return instance::filter
     }
 
     override fun addStrategy(name: String, carryMessageStrategyClass: Class<out CarryMessageStrategy>) {

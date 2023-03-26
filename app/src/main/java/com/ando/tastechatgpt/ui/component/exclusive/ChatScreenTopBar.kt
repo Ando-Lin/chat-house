@@ -161,11 +161,12 @@ fun ChatSettings(
                     label = stringResource(id = R.string.model),
                     items = uiState.modelList(),
                     selectedItem = uiState.currentModel(),
-                    onSelect = { onSelectModel(modelList[it]) }
+                    onSelect = { onSelectModel(modelList[it]) },
                 )
 
                 Divider(
                     modifier = Modifier
+                        .padding(top = 10.dp)
                         .align(Alignment.CenterHorizontally),
                     color = MaterialTheme.colorScheme.outlineVariant,
                     thickness = 1.dp
@@ -182,6 +183,7 @@ fun ChatSettings(
 
                 Divider(
                     modifier = Modifier
+                        .padding(top = 10.dp)
                         .align(Alignment.CenterHorizontally),
                     color = MaterialTheme.colorScheme.outlineVariant,
                     thickness = 1.dp
@@ -189,7 +191,7 @@ fun ChatSettings(
 
 
                 //单一功能按钮组
-                Row(Modifier.padding(vertical = 12.dp)) {
+                Row(Modifier.padding(vertical = 10.dp)) {
 
                     FilledTonalSquareIconButton(
                         onClick = onClickClearConversation,
@@ -219,9 +221,12 @@ fun SettingMultiShortItem(
     label: String,
     items: List<String>,
     selectedItem: String,
+    headContent: @Composable (RowScope.()->Unit)?=null,
+    tailContent: @Composable (RowScope.()->Unit)? = null,
     onSelect: (index: Int) -> Unit
 ) {
     MultiShortItem(modifier = modifier, label = label) {
+        headContent?.invoke(this)
         items.forEachIndexed { index, item ->
             val selected = item == selectedItem
             FilterChip(
@@ -240,6 +245,7 @@ fun SettingMultiShortItem(
                 }
             )
         }
+        tailContent?.invoke(this)
     }
 }
 
