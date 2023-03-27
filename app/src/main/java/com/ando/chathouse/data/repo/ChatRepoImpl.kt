@@ -6,6 +6,8 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.paging.PagingSource
 import com.ando.chathouse.constant.MY_UID
 import com.ando.chathouse.constant.PreferencesKey
+import com.ando.chathouse.constant.WRITE_DB_TIME_THRESHOLD
+import com.ando.chathouse.constant.WRITE_DB_TOKEN_THRESHOLD
 import com.ando.chathouse.data.source.local.ChatLocalDataSource
 import com.ando.chathouse.di.IoDispatcher
 import com.ando.chathouse.domain.entity.ChatEntity
@@ -339,16 +341,12 @@ class ChatRepoImpl @Inject constructor(
      */
     private suspend fun streamMessage(messageId: Int, flow: Flow<String?>) {
         val stringBuilder = StringBuilder()
-        //字符增量
-        var charDelta = 0
-        //增量阈值
-        val deltaThreshold = 20
+        //token增量
+        var tokenDelta = 0
         //时间增量
         var timeDelta: Long
         //上次操作时间
         var lastTimeMillis = System.currentTimeMillis()
-        //时间阈值
-        val timeThreshold = 500
         withContext(ioDispatcher){
             flow
                 .onCompletion { throwable ->
@@ -366,17 +364,17 @@ class ChatRepoImpl @Inject constructor(
 
                     stringBuilder.append(it)
 
-                    charDelta += it.length
+                    tokenDelta++
 
                     val nowMillis = System.currentTimeMillis()
 
                     timeDelta = nowMillis - lastTimeMillis
 
                     //增量超过阈值时写入数据库
-                    if (timeDelta > timeThreshold || charDelta > deltaThreshold) {
+                    if (timeDelta > WRITE_DB_TIME_THRESHOLD || tokenDelta > WRITE_DB_TOKEN_THRESHOLD) {
                         updateMessage(messageId, stringBuilder.toString())
                         lastTimeMillis = nowMillis
-                        charDelta = 0
+                        tokenDelta = 0
                     }
 
                 }

@@ -22,7 +22,7 @@ class UserRepoImpl @Inject constructor(
 
     init {
         external.launch {
-            //检查是否存在一号用户，即用户本人
+            //检查是否存在一号用户，即用户本人.防止误删导致错误
             fetchById(MY_UID).collect {
                 if (it != null) {
                     return@collect
@@ -34,25 +34,6 @@ class UserRepoImpl @Inject constructor(
                         name = "用户",
                         avatar = null,
                         description = "",
-                        createTime = LocalDateTime.now()
-                    )
-                )
-            }
-        }
-        external.launch {
-            //添加角色设计师
-            val designerId = MY_UID+1
-            fetchById(designerId).collect{
-                if (it != null) {
-                    return@collect
-                }
-                //不存在则添加用户
-                save(
-                    UserEntity(
-                        id = designerId,
-                        name = "角色设计师",
-                        avatar = null,
-                        description = "你是角色设计师，你擅长通过模糊的描述给出极细细致的人物描述，包括性格、外貌、口吻、小动作等",
                         createTime = LocalDateTime.now()
                     )
                 )

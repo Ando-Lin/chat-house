@@ -22,12 +22,14 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.ando.chathouse.constant.WRITE_DB_TIME_THRESHOLD
+import com.ando.chathouse.constant.WRITE_DB_TOKEN_THRESHOLD
 import com.ando.chathouse.ext.toAnnotatedString
 import com.ando.chathouse.ext.withMutableInteractionSource
 import kotlinx.coroutines.delay
 
 data class BubbleTextUiState(
-    val text: ()->String,
+    val text: () -> String,
     val isMe: Boolean,
     val selected: Boolean,
     val reading: Boolean = false,
@@ -87,7 +89,7 @@ fun ExtendedBubbleText(
         }
     }
     //当selected变化时说明执行了操作，需要取消checked状态
-    LaunchedKeyEffect(uiState.selected){
+    LaunchedKeyEffect(uiState.selected) {
         checked = false
     }
 
@@ -138,7 +140,7 @@ fun ExtendedBubbleText(
 @Composable
 fun BubbleText(
     modifier: Modifier = Modifier,
-    text: ()->String,
+    text: () -> String,
     textColor: Color = LocalContentColor.current,
     containerColor: Color = MaterialTheme.colorScheme.surfaceVariant,
     shapeReverse: Boolean = false,
@@ -174,17 +176,38 @@ fun BubbleText(
                 )
             }
     ) {
-        if (reading){
-            //滚动时使用
+        if (reading) {
+            //流式打印字符.用saveble防止显示异常
             var newText by rememberSaveable {
                 mutableStateOf("")
             }
             val receiveText = text()
-            LaunchedEffect(receiveText){
-                val start = receiveText.indexOf(newText) + newText.length
-                for (i in start until receiveText.length){
-                    delay(50)
-                    newText += receiveText[i]
+            LaunchedEffect(receiveText) {
+                //根据start和receiveText的长度调整速度或者增量
+                //待打印的数量较多时,增加charDelta,降低delay.反之减少charDelta增大delay
+                var start = receiveText.indexOf(newText) + newText.length
+                val len = receiveText.length - start
+                //每个字符的最长写入时间，超过则触发更新数据库进一步增长len导致延迟问题
+                val perCharTime =
+                    when {
+                        len > 0 -> WRITE_DB_TIME_THRESHOLD / len
+                        else -> 0
+                    }
+                //每个token的最少字符数。例如中文：1~2字=1个token，则理想情况下len（字符数）~=token数，此时应一个字符一个字符的打印
+                val perTokenChar =
+                    when {
+                        len < WRITE_DB_TOKEN_THRESHOLD -> len / WRITE_DB_TOKEN_THRESHOLD
+                        else -> 1
+                    }
+                while (newText.length != receiveText.length) {
+                    val endIndex =
+                        when {
+                            start + perTokenChar >= receiveText.length -> receiveText.length
+                            else -> perTokenChar + start
+                        }
+                    newText += receiveText.subSequence(start, endIndex)
+                    start += perTokenChar
+                    delay(perCharTime)
                 }
             }
             TText(
@@ -194,7 +217,7 @@ fun BubbleText(
                 onLongClick = onLongClick,
                 onClick = onClick
             )
-        }else{
+        } else {
             TText(
                 text = text(),
                 interactionSource = interactionSource,
@@ -210,10 +233,10 @@ fun BubbleText(
 @Composable
 private fun TText(
     text: String,
-    interactionSource:MutableInteractionSource,
-    textColor:Color,
+    interactionSource: MutableInteractionSource,
+    textColor: Color,
     onLongClick: () -> Unit,
-    onClick: ()->Unit,
+    onClick: () -> Unit,
 ) {
     val layoutResult = remember {
         mutableStateOf<TextLayoutResult?>(null)

@@ -38,6 +38,7 @@ import androidx.paging.compose.items
 import com.ando.chathouse.ChatScreenTabDestination
 import com.ando.chathouse.ProfileScreenDestination
 import com.ando.chathouse.R
+import com.ando.chathouse.constant.MY_UID
 import com.ando.chathouse.domain.pojo.User
 import com.ando.chathouse.ext.withMutableInteractionSource
 import com.ando.chathouse.ui.component.*
@@ -107,9 +108,11 @@ fun RoleListScreen(
                     .padding(paddingValues)
                     .fillMaxSize(),
                 onClickRoleItem = {
-                    navigationAction(
-                        ChatScreenTabDestination.routeWithArg(it)
-                    )
+                    if (it != MY_UID) {
+                        navigationAction(
+                            ChatScreenTabDestination.routeWithArg(it)
+                        )
+                    }
                 },
                 onClickAvatar = {
                     navigationAction(

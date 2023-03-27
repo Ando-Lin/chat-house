@@ -5,7 +5,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.paging.*
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.map
 import com.ando.chathouse.constant.MY_UID
 import com.ando.chathouse.data.repo.UserRepo
 import com.ando.chathouse.domain.entity.UserEntity
@@ -34,7 +37,7 @@ class RoleListScreenViewModel @Inject constructor(
             .map { pagingData: PagingData<UserEntity> ->
                 pagingData.map(UserEntity::toUser)
             }
-            .cachedIn(viewModelScope)
+//            .cachedIn(viewModelScope)
 
     fun delete(uid: Int) {
         viewModelScope.launch {

@@ -2,7 +2,6 @@
 
 package com.ando.chathouse.ui.screen
 
-import android.util.Log
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -24,7 +23,6 @@ import androidx.compose.ui.platform.*
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.items
 import com.ando.chathouse.ProfileScreenDestination
@@ -240,22 +238,17 @@ fun ChatArea(
     //查看最新消息时
     //TODO: 导航到最新消息的浮动按钮
     val isLookAtLatest by remember {
-        derivedStateOf { lazyColumnState.firstVisibleItemIndex <= 3 }
+        derivedStateOf { lazyColumnState.firstVisibleItemIndex <= 4 }
     }
-    LaunchedEffect(pagingItems.loadState.append) {
-        Log.i(TAG, "pagingItems.loadState.append: ${pagingItems.loadState.append}")
-        Log.i(TAG, "isLookAtLatest: $isLookAtLatest")
+//    Log.i(TAG, "pagingItem.loadState.source: ${pagingItems.loadState.source}")
+    LaunchedEffect(pagingItems.loadState.refresh) {
+//        Log.i(TAG, "pagingItems.loadState.append: ${pagingItems.loadState.append}")
+//        Log.i(TAG, "isLookAtLatest: $isLookAtLatest")
         //分页加载状态
-        when (pagingItems.loadState.append) {
-            LoadState.Loading -> {}
-            is LoadState.Error -> {}
-            else -> {   //没有加载时
-                //当查看最新消息时自动滚动最新消息
-                //如果页面停留在最新的前两项则自动滚动到最新的一项
-                if (isLookAtLatest) {
-                    lazyColumnState.animateScrollToItem(0)
-                }
-            }
+//        if (pagingItems.loadState.refresh is LoadState.NotLoading){
+//        }
+        if (isLookAtLatest) {
+            lazyColumnState.animateScrollToItem(0)
         }
     }
     //上下反转的惰性列表

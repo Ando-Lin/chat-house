@@ -15,5 +15,6 @@ object DataBaseModule {
     @Provides
     fun provideDataBase(@ApplicationContext context: Context):AppDataBase =
         Room.databaseBuilder(context, AppDataBase::class.java, "local_db")
+            .createFromAsset("database/local_db.db")
             .build()
 }
