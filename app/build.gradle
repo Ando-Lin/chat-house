@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace 'com.ando.tastechatgpt'
+    namespace 'com.ando.chathouse'
     compileSdk 33
 
     defaultConfig {
-        applicationId "com.ando.tastechatgpt"
+        applicationId "com.ando.chathouse"
         minSdk 26
         targetSdk 33
         versionCode 1

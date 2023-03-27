@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">TasteChatGPT</string>
+    <string name="app_name">AI过家家</string>
     <string name="talk_something">说点什么</string>
     <string name="send">发送</string>
     <string name="night_mode_setting">夜间模式设置</string>
