@@ -5,7 +5,6 @@
 
 package com.ando.tastechatgpt.ui.screen
 
-import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.VerticalPager
@@ -13,10 +12,13 @@ import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.rememberDrawerState
-import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.toMutableStateList
 import com.ando.tastechatgpt.ChatScreenTabDestination
 import com.ando.tastechatgpt.RoleListScreenTabDestination
+import com.ando.tastechatgpt.ui.component.LaunchedKeyEffect
 import com.ando.tastechatgpt.ui.screen.MainScreen.drawerState
 import kotlinx.coroutines.launch
 import okhttp3.internal.toImmutableList
@@ -75,21 +77,8 @@ object MainScreen {
         pagerState: PagerState,
         navigationRequest: (String) -> Unit,
     ) {
-        val keyState = rememberSaveable(Unit) {
-            mutableStateOf(key.hashCode())
-        }
-        val isEqual = remember(key) {
-            derivedStateOf { keyState.value == (key.hashCode()) }
-        }
-        if (!isEqual.value) {
-            LaunchedEffect(Unit) {
-                Log.i(
-                    TAG,
-                    "ScreenUI: Launch animete scroll to page ${destinations.indexOf(requestTab)}"
-                )
-                pagerState.animateScrollToPage(destinations.indexOf(requestTab))
-                keyState.value = key.hashCode()
-            }
+        LaunchedKeyEffect(key){
+            pagerState.animateScrollToPage(destinations.indexOf(requestTab))
         }
 //        Log.i(TAG, "MainScreen: cuurrentTab=$requestTab tabs=$destinations key=$keyState")
         MainScreen(

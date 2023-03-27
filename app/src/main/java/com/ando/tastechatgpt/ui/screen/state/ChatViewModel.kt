@@ -105,7 +105,7 @@ class ChatViewModel @Inject constructor(
                             chatRepo.saveChat(chat)
                                 .onSuccess { emit(chat) }
                                 .onFailure { updateUiMessage("创建对话失败: ${it.localizedMessage}") }
-                        }else{
+                        } else {
                             emit(it)
                         }
                     }
@@ -426,10 +426,11 @@ class ChatViewModel @Inject constructor(
                                     entity = value,
                                     avatar = avatar,
                                     bubbleTextUiState = BubbleTextUiState(
-                                        text = value.text,
+                                        text = { value.text },
                                         isMe = myId == value.uid,
                                         editModeState = editModeState,
                                         selected = selected,
+                                        reading = value.status==MessageStatus.Reading,
                                         multiSelectModeState = multiSelectMode
                                     )
                                 )

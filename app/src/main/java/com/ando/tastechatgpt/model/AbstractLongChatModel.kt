@@ -9,7 +9,7 @@ import retrofit2.converter.scalars.ScalarsConverterFactory
 
 abstract class AbstractLongChatModel : LongChatModel {
     abstract val baseUrl: String
-    open val httpClient: OkHttpClient? = null
+    open val httpClient: OkHttpClient? = OkHttpClient()
     open var moshi: Moshi = Moshi.Builder()
         .add(KotlinJsonAdapterFactory())
         .build()
@@ -18,6 +18,8 @@ abstract class AbstractLongChatModel : LongChatModel {
             .baseUrl(baseUrl)
             .addConverterFactory(MoshiConverterFactory.create(moshi).asLenient())
             .addConverterFactory(ScalarsConverterFactory.create())
-            .apply { httpClient?.let { this.client(it) } }
+            .apply {
+                httpClient?.let { this.client(it) }
+            }
             .build()
 }

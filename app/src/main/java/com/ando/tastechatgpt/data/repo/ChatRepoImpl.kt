@@ -15,6 +15,7 @@ import com.ando.tastechatgpt.domain.pojo.*
 import com.ando.tastechatgpt.exception.HttpRequestException
 import com.ando.tastechatgpt.exception.NoSuchChatException
 import com.ando.tastechatgpt.exception.NoSuchUserException
+import com.ando.tastechatgpt.ext.relativeToNowSecondDiff
 import com.ando.tastechatgpt.model.ChatModel
 import com.ando.tastechatgpt.model.ChatModelManger
 import com.ando.tastechatgpt.profile
@@ -26,7 +27,6 @@ import retrofit2.HttpException
 import java.time.Duration
 import java.time.LocalDateTime
 import javax.inject.Inject
-import kotlin.time.Duration.Companion.seconds
 
 
 class ChatRepoImpl @Inject constructor(
@@ -39,7 +39,6 @@ class ChatRepoImpl @Inject constructor(
     @ApplicationContext private val context: Context,
 ) : ChatRepo {
 
-    private val timeout = 30.seconds
 
     override val availableModelList: List<String>
         get() = chatModelManger.models.map { it.key }
@@ -50,6 +49,13 @@ class ChatRepoImpl @Inject constructor(
             localDS.shiftStatus(
                 originStatus = MessageStatus.Sending,
                 targetStatus = MessageStatus.Failed
+            )
+        }
+        //转换所有读取状态为中断状态
+        externalScope.launch {
+            localDS.shiftStatus(
+                originStatus = MessageStatus.Reading,
+                targetStatus = MessageStatus.Interrupt
             )
         }
     }
@@ -98,7 +104,7 @@ class ChatRepoImpl @Inject constructor(
      * 该函数尝试以小分页的方式一边记录已添加的消息超过最大令牌数一边添加消息，当达到或超过最大令牌数时或者达到最大页数时将停止添加消息
      * 注意：该函数将ai消息放在最后
      * @param chatId: 对话id
-     * @param uid: 用户id
+     * @param strategy: 过滤或者选择携带消息的策略
      * @return: 角色消息列表。
      */
     private suspend fun getHistory(
@@ -187,20 +193,19 @@ class ChatRepoImpl @Inject constructor(
                 }
                 chat ?: throw NoSuchChatException(chatId)
 
-                //将发送的消息插入数据库
-                val messageId = withContext(ioDispatcher) {
-                    localDS.insertMessage(message.toEntity())
-                }
-
-                //组装上下文和待发送的信息
-                val roleMessages =
-                    composeContextForSendMessage(chatId = chatId, message = message.text)
-
+                //将待发送的消息插入数据库
+                val messageId = localDS.insertMessage(message.toEntity())
 
                 try {
+                    //组装上下文和待发送的信息
+                    val roleMessages =
+                        composeContextForSendMessage(chatId = chatId, message = message.text)
+
                     //发送消息
-                    val responseMessage = withContext(ioDispatcher) {
-                        sendMessage(modelName, roleMessages).first()
+                    val messageFlow = sendMessage(modelName, roleMessages)
+
+                    val firstMessage = withContext(ioDispatcher) {
+                        messageFlow.first()
                     }
                     //查询成功则更新发送状态
                     withContext(ioDispatcher) {
@@ -210,24 +215,29 @@ class ChatRepoImpl @Inject constructor(
                     val messageEntity = withContext(ioDispatcher) {
                         localDS.getLatestMessageByChatId(chatId = chatId).first()
                     }
-                    val timestamp = messageEntity?.timestamp ?: LocalDateTime.MIN
-                    val now = LocalDateTime.now()
-                    val diff = Duration.between(timestamp, now).seconds
+                    val (now, diff) = messageEntity?.timestamp.relativeToNowSecondDiff()
                     //插入到本地数据库中
-                    localDS.insertMessage(
+                    val msgId = localDS.insertMessage(
                         ChatMessageEntity(
                             chatId = chatId,
                             uid = chat.uid,
-                            text = responseMessage ?: "",
+                            text = firstMessage ?: "",
                             timestamp = now,
-                            secondDiff = diff
+                            secondDiff = diff,
+                            status = MessageStatus.Reading
                         )
                     )
-                } catch (e: HttpException) {
+                    //流式收集信息
+                    streamMessage(messageId = msgId, flow = messageFlow)
+
+                    return@runCatching msgId
+                }catch (e: HttpException) {
                     updateMessage(id = messageId, status = MessageStatus.Failed)
+                    Log.e(TAG, "sendMessage: 网络异常", e)
                     throw HttpRequestException(e)
                 } catch (e: Exception) {
                     updateMessage(id = messageId, status = MessageStatus.Failed)
+                    Log.e(TAG, "sendMessage: 网络异常", e)
                     throw e
                 }
             }
@@ -252,68 +262,126 @@ class ChatRepoImpl @Inject constructor(
                 //转变为发送状态
                 updateMessage(id = messageId, status = MessageStatus.Sending)
 
-                //组装数据
-                val roleMessages = withContext(ioDispatcher) {
-                    composeContextForSendMessage(
-                        chatId = chatMessage.chatId,
-                        message = chatMessage.text
-                    )
-                }
 
-                //发送
-                val responseMessage: String?
                 try {
-                    responseMessage = withContext(ioDispatcher) {
-                        sendMessage(modelName = modelName, roleMessages = roleMessages).first()
+                    //组装数据
+                    val roleMessages = withContext(ioDispatcher) {
+                        composeContextForSendMessage(
+                            chatId = chatMessage.chatId,
+                            message = chatMessage.text
+                        )
                     }
+
+                    val messageFlow =
+                        sendMessage(modelName = modelName, roleMessages = roleMessages)
+
+                    //第一个值阻塞收集
+                    val firstMessage = withContext(ioDispatcher) {
+                        messageFlow.first() ?: ""
+                    }
+
+                    //收集最新的两个消息
+                    val latestTwoMessage = withContext(externalScope.coroutineContext) {
+                        getPagingByCid(
+                            chatId = chatMessage.chatId,
+                            pageQuery = PageQuery(pageSize = 2)
+                        ).first()
+                    }
+
+                    //创建重发的消息
+                    val lastMessageTime = getLastMessageTimeForResend(chatMessage, latestTwoMessage)
+                    val (timestamp, secondDiff) = lastMessageTime.relativeToNowSecondDiff()
+                    val resentMessage = chatMessage.copy(
+                        id = 0,
+                        secondDiff = secondDiff,
+                        timestamp = timestamp,
+                        status = MessageStatus.Success
+                    )
+
+                    //删除
+                    withContext(ioDispatcher) {
+                        localDS.deleteMessage(messageId)
+                    }
+
+
+                    val msgId = withContext(ioDispatcher) {
+                        //插入已重发的消息
+                        localDS.insertMessage(resentMessage)
+                        delay(700)
+                        //插入第一条响应的消息
+                        val messageCreatTime = LocalDateTime.now()
+                        localDS.insertMessage(
+                            ChatMessageEntity(
+                                chatId = chatId,
+                                uid = chat.uid,
+                                text = firstMessage,
+                                timestamp = messageCreatTime,
+                                secondDiff = Duration.between(timestamp, messageCreatTime).seconds,
+                                status = MessageStatus.Reading
+                            )
+                        )
+                    }
+
+                    streamMessage(messageId = msgId, flow = messageFlow)
+
+                    return@runCatching msgId
                 } catch (e: Exception) {
                     updateMessage(id = messageId, status = MessageStatus.Failed)
                     Log.e(TAG, "resendMessage: 发送消息异常", e)
                     throw e
                 }
-
-                val latestTwoMessage = withContext(externalScope.coroutineContext) {
-                    getPagingByCid(
-                        chatId = chatMessage.chatId,
-                        pageQuery = PageQuery(pageSize = 2)
-                    ).first()
-                }
-
-                val now = LocalDateTime.now()
-                val lastMessageTime = getLastMessageTimeForResend(chatMessage, latestTwoMessage)
-                val secondDiff = Duration.between(lastMessageTime ?: LocalDateTime.MIN, now).seconds
-
-                val resentMessage = chatMessage.copy(
-                    id = 0,
-                    secondDiff = secondDiff,
-                    timestamp = now,
-                    status = MessageStatus.Success
-                )
-
-                //删除
-                launch(ioDispatcher) {
-                    localDS.deleteMessage(messageId)
-                }
-
-
-                //插入响应的消息
-                withContext(ioDispatcher) {
-                    //插入已重发的消息
-                    localDS.insertMessage(resentMessage)
-                    delay(700)
-                    val n = LocalDateTime.now()
-                    localDS.insertMessage(
-                        ChatMessageEntity(
-                            chatId = chatId,
-                            uid = chat.uid,
-                            text = responseMessage ?: "",
-                            timestamp = n,
-                            secondDiff = Duration.between(now, n).seconds
-                        )
-                    )
-                }
             }
         }
+    }
+
+    /**
+     * 流式收集消息
+     */
+    private suspend fun streamMessage(messageId: Int, flow: Flow<String?>) {
+        val stringBuilder = StringBuilder()
+        //字符增量
+        var charDelta = 0
+        //增量阈值
+        val deltaThreshold = 20
+        //时间增量
+        var timeDelta: Long
+        //上次操作时间
+        var lastTimeMillis = System.currentTimeMillis()
+        //时间阈值
+        val timeThreshold = 500
+        withContext(ioDispatcher){
+            flow
+                .onCompletion { throwable ->
+                    //确保全部写入
+                    updateMessage(messageId, stringBuilder.toString())
+                    //根据是否有异常写入状态
+                    val status = when (throwable == null) {
+                        true -> MessageStatus.Success
+                        else -> MessageStatus.Interrupt
+                    }
+                    updateMessage(messageId, status = status)
+                }
+                .collect {
+                    it ?: return@collect
+
+                    stringBuilder.append(it)
+
+                    charDelta += it.length
+
+                    val nowMillis = System.currentTimeMillis()
+
+                    timeDelta = nowMillis - lastTimeMillis
+
+                    //增量超过阈值时写入数据库
+                    if (timeDelta > timeThreshold || charDelta > deltaThreshold) {
+                        updateMessage(messageId, stringBuilder.toString())
+                        lastTimeMillis = nowMillis
+                        charDelta = 0
+                    }
+
+                }
+        }
+
     }
 
     private fun getLastMessageTimeForResend(

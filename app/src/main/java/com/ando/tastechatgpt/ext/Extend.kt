@@ -11,6 +11,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.navigation.NavHostController
+import java.time.Duration
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.regex.Pattern
@@ -24,6 +25,11 @@ fun String.toAnnotatedString(): AnnotatedString {
     return AnnotatedString(text = this, spanStyle = SpanStyle())
 }
 
+fun LocalDateTime?.relativeToNowSecondDiff():Pair<LocalDateTime, Long>{
+    val now = LocalDateTime.now()
+    val secondDiff = Duration.between(this ?: LocalDateTime.MIN, now).seconds
+    return now to secondDiff
+}
 
 fun LocalDateTime.formatByNow(context: Context): String {
     val now = LocalDateTime.now()
@@ -73,6 +79,7 @@ suspend fun PressGestureScope.withMutableInteractionSource(
         interactionSource.emit(PressInteraction.Cancel(press))
     }
 }
+
 
 suspend fun Context.showToast(content:String) =
     Toast.makeText(this, content, Toast.LENGTH_SHORT).show()

@@ -1,12 +1,8 @@
 package com.ando.tastechatgpt.domain.entity
 
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.ando.tastechatgpt.R
 import java.time.LocalDateTime
 
 /**
@@ -39,20 +35,10 @@ data class ChatStatusPojo(
     val status: MessageStatus
 )
 
-enum class MessageStatus(val value: Int, val ui: @Composable () -> Unit) {
-    Success(0, { }),
-    Failed(
-        1,
-        {
-            Icon(
-                painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_failed),
-                tint = MaterialTheme.colorScheme.error,
-                contentDescription = null
-            )
-        }),
-    Sending(2, {
-        com.ando.tastechatgpt.ui.component.CycleAnimation(
-            iconRes = R.drawable.ic_retry, isClockwise = false
-        )
-    });
+enum class MessageStatus {
+    Success,
+    Failed,
+    Sending,
+    Reading,
+    Interrupt
 }

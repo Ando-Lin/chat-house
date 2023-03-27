@@ -34,7 +34,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -44,7 +43,6 @@ import com.ando.tastechatgpt.domain.pojo.UserDetail
 import com.ando.tastechatgpt.ui.component.*
 import com.ando.tastechatgpt.ui.screen.state.ProfileExtraSettingUiState
 import com.ando.tastechatgpt.ui.screen.state.ProfileViewModel
-import com.ando.tastechatgpt.ui.theme.TasteChatGPTTheme
 import com.ando.tastechatgpt.util.Utils
 import kotlinx.coroutines.flow.collectLatest
 
@@ -70,6 +68,7 @@ fun ProfileScreen(
     LaunchedEffect(message) {
         if (message.isNotBlank()) {
             SnackbarUI.showMessage(message)
+            viewModel.resetMessage()
         }
     }
 
@@ -423,20 +422,6 @@ fun TextAndInput(
 }
 
 
-@Composable
-private fun UniformDivider(modifier: Modifier = Modifier) {
-    Divider(
-        modifier = modifier.fillMaxWidth(0.7f),
-        color = MaterialTheme.colorScheme.surfaceVariant
-    )
-}
 
-@Preview
-@Composable
-fun ProfileScreenPrev() {
-    TasteChatGPTTheme {
-//        ProfileScreen()
-    }
-}
 
 private const val TAG = "ProfileScreen"

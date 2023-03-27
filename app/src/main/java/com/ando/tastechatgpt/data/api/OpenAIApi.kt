@@ -3,10 +3,12 @@ package com.ando.tastechatgpt.data.api
 import com.ando.tastechatgpt.domain.pojo.ChatGPTCompletionResponse
 import com.ando.tastechatgpt.domain.pojo.RoleMessage
 import com.squareup.moshi.Json
+import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.Header
 import retrofit2.http.POST
+import retrofit2.http.Streaming
 
 interface OpenAIApi {
 
@@ -20,6 +22,18 @@ interface OpenAIApi {
         @Header("Authorization") authorization:Authorization,
         @Body para: ChatGPTCompletionPara
     ):Response<ChatGPTCompletionResponse>
+
+    /**
+     * @param authorization: 认证
+     * @param para: 参数
+     */
+    @Streaming
+    @POST("/v1/chat/completions")
+    suspend fun streamChatGPT(
+        @Header("Authorization") authorization:Authorization,
+        @Body para: ChatGPTCompletionPara
+    ): ResponseBody
+
 }
 
 data class Authorization(

@@ -240,10 +240,11 @@ fun ChatArea(
     //查看最新消息时
     //TODO: 导航到最新消息的浮动按钮
     val isLookAtLatest by remember {
-        derivedStateOf { lazyColumnState.firstVisibleItemIndex <= 2 }
+        derivedStateOf { lazyColumnState.firstVisibleItemIndex <= 3 }
     }
     LaunchedEffect(pagingItems.loadState.append) {
-        Log.i(TAG, "ChatArea: ${pagingItems.loadState.append}")
+        Log.i(TAG, "pagingItems.loadState.append: ${pagingItems.loadState.append}")
+        Log.i(TAG, "isLookAtLatest: $isLookAtLatest")
         //分页加载状态
         when (pagingItems.loadState.append) {
             LoadState.Loading -> {}
@@ -268,6 +269,7 @@ fun ChatArea(
         val itemModifier = Modifier.fillMaxWidth()
         items(items = pagingItems, key = { value: ChatMessageUiState -> value.id }) { item ->
             if (item != null) {
+
                 SimpleMessage(
                     messageUiState = item,
                     isMe = item.uid == myId,
@@ -355,7 +357,7 @@ fun SimpleMessage(
                             Modifier.breathingLight(rememberBreathingLightState())
                         )
                         .heightIn(min = avatarSize)
-                        .widthIn(max = this.maxWidth-avatarSize-10.dp)
+                        .widthIn(max = this.maxWidth - avatarSize - 10.dp)
                 )
             }
 
@@ -367,6 +369,15 @@ fun SimpleMessage(
                     modifier = Modifier.align(Alignment.Bottom)
                 )
             }
+            if (messageUiState.status == MessageStatus.Interrupt) {
+                Text(
+                    text = stringResource(id = R.string.receive_interrupted),
+                    color = colorScheme.error,
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.align(Alignment.Bottom)
+                )
+            }
+
         }
     }
 }

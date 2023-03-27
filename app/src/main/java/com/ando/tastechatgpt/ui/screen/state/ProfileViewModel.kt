@@ -81,6 +81,9 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
+    fun resetMessage(){
+        screenUiState = screenUiState.copy(message = "")
+    }
 
     fun saveUser() {
         viewModelScope.launch {

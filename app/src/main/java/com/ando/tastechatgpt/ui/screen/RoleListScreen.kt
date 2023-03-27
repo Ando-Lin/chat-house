@@ -77,6 +77,7 @@ fun RoleListScreen(
     LaunchedEffect(message) {
         if (message.isBlank()) return@LaunchedEffect
         SnackbarUI.showMessage(message = message)
+        viewModel.resetMessage()
     }
 
 

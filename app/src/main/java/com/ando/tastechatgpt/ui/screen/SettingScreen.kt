@@ -133,7 +133,7 @@ private fun ScreenContent(
                 textStyle = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(vertical = 10.dp),
-                maxLines = 1,
+                maxLines = 3,
                 interactionSource = interactionSource
             )
         }

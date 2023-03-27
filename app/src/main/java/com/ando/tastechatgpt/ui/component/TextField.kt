@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 
@@ -26,13 +27,16 @@ fun TTextField(
     modifier: Modifier = Modifier,
     text: String,
     tip: String = "",
-    maxLines: Int = 1,
     showIndicator: Boolean = false,
     onTextChange: (String) -> Unit,
     textStyle: TextStyle = TextStyle.Default,
     colors: TTextFieldColors = TTextFieldColors.defaultColors(),
     shape: Shape = RoundedCornerShape(10),
+    singleLine: Boolean = false,
+    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
     contentPadding: PaddingValues = PaddingValues(12.dp),
+    onTextLayout: (TextLayoutResult) -> Unit = {},
+    readOnly: Boolean = false,
     interactionSource: MutableInteractionSource = remember {
         MutableInteractionSource()
     }
@@ -44,9 +48,11 @@ fun TTextField(
         onValueChange = onTextChange,
         maxLines = maxLines,
         modifier = modifier,
+        readOnly = readOnly,
         textStyle = textStyle.copy(color = colors.contentColor),
         cursorBrush = SolidColor(colorScheme.primary),
         interactionSource = interactionSource,
+        onTextLayout = onTextLayout
     ) { content ->
         Surface(
             color = colors.containerColor,

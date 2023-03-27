@@ -16,8 +16,10 @@ object ChatModelModule {
     @Provides
     fun provideChatMangerImpl(okHttpClient: OkHttpClient):ChatModelMangerImpl{
         return ChatModelMangerImpl().apply {
-            addModel("openAI GPT3.5", lazy { OpenAIGPT3d5Model.create(OPENAI_URL, httpClient = okHttpClient) })
-            addModel("openAI GPT3.5 mirror", lazy { OpenAIGPT3d5Model.create(OPENAI_MIRROR_URL, httpClient = okHttpClient) })
+//            addModel("openAI GPT3.5", lazy { OpenAIGPT3d5Model.create(OPENAI_URL, httpClient = okHttpClient) })
+//            addModel("openAI GPT3.5 mirror", lazy { OpenAIGPT3d5Model.create(OPENAI_MIRROR_URL, httpClient = okHttpClient) })
+            addModel("openAI GPT3.5 ", lazy { StreamOpenAIGPT3d5Model.create(OPENAI_URL, httpClient = okHttpClient) })
+            addModel("openAI GPT3.5 mirror", lazy { StreamOpenAIGPT3d5Model.create(OPENAI_MIRROR_URL, httpClient = okHttpClient) })
         }
     }
 }

@@ -48,6 +48,10 @@ class RoleListScreenViewModel @Inject constructor(
         screenUiState = screenUiState.copy(message = message)
     }
 
+    fun resetMessage(){
+        updateMessage("")
+    }
+
 }
 
 data class RoleListScreenUiState(

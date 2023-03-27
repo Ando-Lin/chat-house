@@ -19,17 +19,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.ando.tastechatgpt.ext.toAnnotatedString
 import com.ando.tastechatgpt.ext.withMutableInteractionSource
+import kotlinx.coroutines.delay
 
 data class BubbleTextUiState(
-    val text: String,
+    val text: ()->String,
     val isMe: Boolean,
     val selected: Boolean,
+    val reading: Boolean = false,
     private val editModeState: State<Boolean>,
     private val multiSelectModeState: State<Boolean>
 ) {
@@ -85,19 +86,9 @@ fun ExtendedBubbleText(
             checked = false
         }
     }
-    //用于检测是否发生了无条件重组
-    val firstCompose = remember {
-        mutableStateOf(true)
-    }
-    //当选择变化是应取消checked
-    LaunchedEffect(uiState.selected) {
-        //防止无条件重组的干扰
-        if (!firstCompose.value) {
-            checked = false
-        }
-    }
-    LaunchedEffect(Unit) {
-        firstCompose.value = false
+    //当selected变化时说明执行了操作，需要取消checked状态
+    LaunchedKeyEffect(uiState.selected){
+        checked = false
     }
 
 
@@ -106,10 +97,11 @@ fun ExtendedBubbleText(
 
         BubbleText(
             modifier = modifier,
-            text = uiState.text.toAnnotatedString(),
+            text = uiState.text,
             textColor = textColor,
             containerColor = bubbleColor,
             shapeReverse = !uiState.isMe,
+            reading = uiState.reading,
             onLongClick = onLongClick,
             onClick = {
                 checked = uiState.multiSelectMode && !checked
@@ -147,10 +139,11 @@ fun ExtendedBubbleText(
 @Composable
 fun BubbleText(
     modifier: Modifier = Modifier,
-    text: AnnotatedString,
+    text: ()->String,
     textColor: Color = LocalContentColor.current,
     containerColor: Color = MaterialTheme.colorScheme.surfaceVariant,
     shapeReverse: Boolean = false,
+    reading: Boolean = false,
     onLongClick: () -> Unit,
     onClick: () -> Unit
 ) {
@@ -160,10 +153,7 @@ fun BubbleText(
     } else {
         RoundedCornerShape(5.dp, 20.dp, 20.dp, 20.dp)
     }
-    val layoutResult = remember {
-        mutableStateOf<TextLayoutResult?>(null)
-    }
-    val onClickText = { offset: Int -> /*TODO: 点击文字特殊tag做出响应*/ }
+
     val interactionSource = remember {
         MutableInteractionSource()
     }
@@ -185,23 +175,75 @@ fun BubbleText(
                 )
             }
     ) {
-        Text(text = text,
-            modifier = Modifier
-                .padding(16.dp)
-                .pointerInput(Unit) {
-                    detectTapGestures {
+        if (reading){
+            //滚动时使用
+            var newText by rememberSaveable {
+                mutableStateOf("")
+            }
+            val receiveText = text()
+            LaunchedEffect(receiveText){
+                val start = receiveText.indexOf(newText) + newText.length
+                for (i in start until receiveText.length){
+                    delay(50)
+                    newText += receiveText[i]
+                }
+            }
+            TText(
+                text = newText,
+                interactionSource = interactionSource,
+                textColor = textColor,
+                onLongClick = onLongClick,
+                onClick = onClick
+            )
+        }else{
+            TText(
+                text = text(),
+                interactionSource = interactionSource,
+                textColor = textColor,
+                onLongClick = onLongClick,
+                onClick = onClick
+            )
+        }
+
+    }
+}
+
+@Composable
+private fun TText(
+    text: String,
+    interactionSource:MutableInteractionSource,
+    textColor:Color,
+    onLongClick: () -> Unit,
+    onClick: ()->Unit,
+) {
+    val layoutResult = remember {
+        mutableStateOf<TextLayoutResult?>(null)
+    }
+    val onClickText = { offset: Int -> /*TODO: 点击文字特殊tag做出响应*/ }
+    Text(
+        text = text.toAnnotatedString(),
+        modifier = Modifier
+            .padding(16.dp)
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onLongPress = {
+                        onLongClick()
+                    },
+                    onTap = {
+                        onClick()
                         layoutResult.value?.let { layout ->
                             onClickText(layout.getOffsetForPosition(it))
                         }
-                    }
-                },
-            style = MaterialTheme.typography.bodyLarge.copy(
-                color = textColor, textAlign = TextAlign.Start
-            ),
-            onTextLayout = {
-                layoutResult.value = it
-            })
-    }
+                    },
+                    onPress = { withMutableInteractionSource(it, interactionSource) }
+                )
+            },
+        style = MaterialTheme.typography.bodyLarge.copy(
+            color = textColor, textAlign = TextAlign.Start
+        ),
+        onTextLayout = {
+            layoutResult.value = it
+        })
 }
 
 
