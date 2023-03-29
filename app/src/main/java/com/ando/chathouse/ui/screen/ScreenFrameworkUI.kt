@@ -30,9 +30,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun ScreenFrameworkUI(
     drawerState: DrawerState,
-    visualTabDestinationList: List<VisualTabDestination>,
+    visualTabDestinationList: ()->List<VisualTabDestination>,
     enableDrawer: Boolean,
-    currentPage: Int,
+    currentPage: ()->Int,
     navigationRequest: (String) -> Unit,
     scrollToPageRequest: (Int) -> Unit,
     content: @Composable () -> Unit
@@ -76,12 +76,12 @@ fun ScreenFrameworkUI(
 @Composable
 fun NavigationList(
     modifier: Modifier = Modifier,
-    visualTabDestinationList: List<VisualTabDestination>,
-    currentPage: Int,
+    visualTabDestinationList: ()->List<VisualTabDestination>,
+    currentPage: ()->Int,
     scrollToPageRequest: (Int) -> Unit
 ) {
-    visualTabDestinationList.forEachIndexed { index, item ->
-        val selected = currentPage == index
+    visualTabDestinationList().forEachIndexed { index, item ->
+        val selected = currentPage() == index
         NavigationDrawerItem(
             label = {
                 Text(

@@ -15,6 +15,7 @@ import com.ando.chathouse.domain.entity.ChatMessageEntity
 import com.ando.chathouse.domain.entity.MessageStatus
 import com.ando.chathouse.domain.pojo.*
 import com.ando.chathouse.exception.HttpRequestException
+import com.ando.chathouse.exception.MessageStreamInterruptException
 import com.ando.chathouse.exception.NoSuchChatException
 import com.ando.chathouse.exception.NoSuchUserException
 import com.ando.chathouse.ext.relativeToNowSecondDiff
@@ -62,17 +63,22 @@ class ChatRepoImpl @Inject constructor(
         }
     }
 
-    private fun getInstructionRoleMessages(name: String, description: String): List<RoleMessage> {
-        val formattedName = if (name.isNotBlank()) "角色名称:$name," else ""
-        val formattedDescription = "角色描述:" + description.ifBlank { "智能助手" }
+    private fun getInstructionRoleMessages(
+        roleName: String,
+        roleDescription: String,
+        userName: String = ""
+    ): List<RoleMessage> {
+        val formattedName = if (roleName.isNotBlank()) "角色名称:$roleName," else ""
+        val formattedDescription = "角色描述:$roleDescription"
+        val formattedUserName = if (userName.isNotBlank()) "请称呼user为\"$userName\"," else ""
         return listOf(
             RoleMessage(
                 role = RoleMessage.SYSTEM_ROLE,
-                content = "请你根据你之前的回答接下去对话(若缺少信息则推理情境)"
+                content = "${formattedUserName}请你根据上下文接下去扮演角色(若缺少信息则假设后进行对话)."
             ),
             RoleMessage(
                 role = RoleMessage.SYSTEM_ROLE,
-                content = "你正在扮演角色，接下来是这个角色的描述，请以该角色的口吻进行回答并在括号描述神情和体态"
+                content = "你正在扮演角色，接下来是这个角色的描述，请以该角色的口吻进行回答并描述神情和体态在括号内,你必须时刻记住角色描述并扮演好"
             ),
             RoleMessage(
                 role = RoleMessage.SYSTEM_ROLE,
@@ -102,9 +108,8 @@ class ChatRepoImpl @Inject constructor(
     }
 
     /**
-     * 获取用户的历史记录消息。会尽可能添加用户的消息和上一条ai的消息，
-     * 该函数尝试以小分页的方式一边记录已添加的消息超过最大令牌数一边添加消息，当达到或超过最大令牌数时或者达到最大页数时将停止添加消息
-     * 注意：该函数将ai消息放在最后
+     * 获取用户的历史记录消息。只针对中文字符做处理。TODO: 统计token而非字符数
+     * 以消息时间降序遍历，当达到或超过最大字符数时或者达到最大页数时将停止添加消息
      * @param chatId: 对话id
      * @param strategy: 过滤或者选择携带消息的策略
      * @return: 角色消息列表。
@@ -116,7 +121,7 @@ class ChatRepoImpl @Inject constructor(
         val pageSize = 20
         val list = mutableListOf<RoleMessage>()
         //600是指令token的估计值，0.87是中文字符/token的大致比率
-        val maxToken: Int = (4096 * 0.87).toInt() - 600
+        val maxToken: Int = (4096 * 0.8).toInt() - 600
         //字符计数
         var count = 0
         //用于过滤的上下文
@@ -229,19 +234,28 @@ class ChatRepoImpl @Inject constructor(
                             status = MessageStatus.Reading
                         )
                     )
-                    //流式收集信息
-                    streamMessage(messageId = msgId, flow = messageFlow)
+                    try {
+                        //流式收集信息
+                        streamMessage(messageId = msgId, flow = messageFlow)
+                    } catch (e: Exception) {
+                        throw MessageStreamInterruptException(e)
+                    }
 
                     return@runCatching msgId
-                }catch (e: HttpException) {
+                } catch (e: MessageStreamInterruptException) {
+                    Log.e(TAG, "sendMessage: 接收消息异常", e)
+                    throw e
+                } catch (e: HttpException) {
                     updateMessage(id = messageId, status = MessageStatus.Failed)
                     Log.e(TAG, "sendMessage: 网络异常", e)
                     throw HttpRequestException(e)
                 } catch (e: Exception) {
                     updateMessage(id = messageId, status = MessageStatus.Failed)
-                    Log.e(TAG, "sendMessage: 网络异常", e)
+                    Log.e(TAG, "sendMessage: 发送异常", e)
                     throw e
                 }
+
+
             }
         }
     }
@@ -311,25 +325,36 @@ class ChatRepoImpl @Inject constructor(
                         localDS.insertMessage(resentMessage)
                         delay(700)
                         //插入第一条响应的消息
-                        val messageCreatTime = LocalDateTime.now()
+                        val messageCreateTime = LocalDateTime.now()
                         localDS.insertMessage(
                             ChatMessageEntity(
                                 chatId = chatId,
                                 uid = chat.uid,
                                 text = firstMessage,
-                                timestamp = messageCreatTime,
-                                secondDiff = Duration.between(timestamp, messageCreatTime).seconds,
+                                timestamp = messageCreateTime,
+                                secondDiff = Duration.between(timestamp, messageCreateTime).seconds,
                                 status = MessageStatus.Reading
                             )
                         )
                     }
 
-                    streamMessage(messageId = msgId, flow = messageFlow)
+                    try {
+                        streamMessage(messageId = msgId, flow = messageFlow)
+                    } catch (e: Exception) {
+                        throw MessageStreamInterruptException(e)
+                    }
 
                     return@runCatching msgId
+                } catch (e: MessageStreamInterruptException) {
+                    Log.e(TAG, "resendMessage: 接收消息异常", e)
+                    throw e
+                } catch (e: HttpException) {
+                    updateMessage(id = messageId, status = MessageStatus.Failed)
+                    Log.e(TAG, "resendMessage: 网络异常", e)
+                    throw HttpRequestException(e)
                 } catch (e: Exception) {
                     updateMessage(id = messageId, status = MessageStatus.Failed)
-                    Log.e(TAG, "resendMessage: 发送消息异常", e)
+                    Log.e(TAG, "resendMessage: 发送异常", e)
                     throw e
                 }
             }
@@ -347,7 +372,7 @@ class ChatRepoImpl @Inject constructor(
         var timeDelta: Long
         //上次操作时间
         var lastTimeMillis = System.currentTimeMillis()
-        withContext(ioDispatcher){
+        withContext(ioDispatcher) {
             flow
                 .onCompletion { throwable ->
                     //确保全部写入
@@ -443,9 +468,14 @@ class ChatRepoImpl @Inject constructor(
         }
         chat ?: throw NoSuchChatException(chatId)
 
-        //获取chatId的用户
-        val user = withContext(ioDispatcher) {
+        //获取chatId的角色
+        val role = withContext(ioDispatcher) {
             userRepo.fetchById(chat.uid).first() ?: throw NoSuchUserException(chatId)
+        }
+
+        //获取用户本人
+        val me = withContext(ioDispatcher) {
+            userRepo.fetchById(MY_UID).first()!!
         }
 
         //获取策略名称
@@ -457,37 +487,41 @@ class ChatRepoImpl @Inject constructor(
         }
 
         //添加指令
-        if (user.enableGuide) {
+        if (role.enableGuide) {
             roleMessages.addAll(
                 0,
                 getInstructionRoleMessages(
-                    name = user.name,
-                    description = user.description
+                    roleName = role.name,
+                    roleDescription = role.description,
+                    userName = me.name
                 )
             )
         } else {
             roleMessages.add(
                 0,
-                RoleMessage.systemMessage(user.description)
+                RoleMessage.systemMessage(role.description)
             )
         }
 
-        Log.i(TAG, "sendMessage: \n roleMessages = $roleMessages")
-
-
-        //添加提醒
-        if (user.enableReminder) {
-            roleMessages.add(
-                roleMessages.size,
-                RoleMessage.systemMessage(user.reminder)
-            )
-        }
 
         //添加最新消息
         roleMessages.add(
             roleMessages.size,
             RoleMessage.userMessage(message)
         )
+
+
+        //添加提醒
+        if (role.enableReminder) {
+            roleMessages.add(
+                roleMessages.size,
+                RoleMessage.systemMessage(role.reminder)
+            )
+        }
+
+
+        Log.i(TAG, "sendMessage: \n roleMessages = $roleMessages")
+
 
         return roleMessages
     }

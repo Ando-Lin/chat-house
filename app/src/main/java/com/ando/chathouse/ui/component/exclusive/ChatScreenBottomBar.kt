@@ -22,7 +22,7 @@ import com.ando.chathouse.ui.component.TTextField
 
 
 data class ChatScreenBottomBarUiState(
-    val text: String = "",
+    val text:()->String = {""},
     val editModeState: State<Boolean>,
     val multiSelectModeState: State<Boolean>,
 ){
@@ -75,7 +75,7 @@ fun ChatScreenExtendedBottomBar(
 @Composable
 fun ChatScreenBottomBar(
     modifier: Modifier = Modifier,
-    text: String,
+    text: ()->String,
     editMode: Boolean,
     onSend: (fromRight: Boolean, content: String) -> Unit,
     onTextChange: (String) -> Unit,
@@ -137,7 +137,7 @@ fun ChatScreenBottomBar(
 fun InputAndSend(
     modifier: Modifier = Modifier,
     showButton: Boolean = true,
-    text: String,
+    text: ()->String,
     tip: String = "",
     onSend: (String) -> Unit,
     onTextChange: (String) -> Unit,
@@ -156,7 +156,7 @@ fun InputAndSend(
             padding(end = 10.dp)
         }
     val hasText = remember(text) {
-        derivedStateOf { text.isNotBlank() }
+        derivedStateOf { text().isNotBlank() }
     }
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         val textFieldModifier = Modifier
@@ -164,7 +164,7 @@ fun InputAndSend(
         if (!reverseLayout) {
             //输入框
             TTextField(
-                text = text,
+                text = text(),
                 onTextChange = onTextChange,
                 maxLines = 6,
                 modifier = textFieldModifier,
@@ -175,7 +175,7 @@ fun InputAndSend(
 
             //发送按钮
             Button(
-                onClick = { onSend(text) },
+                onClick = { onSend(text()) },
                 modifier = buttonModifier,
                 enabled = hasText.value
             ) {
@@ -186,7 +186,7 @@ fun InputAndSend(
         } else {
             //发送按钮
             Button(
-                onClick = { onSend(text) },
+                onClick = { onSend(text()) },
                 modifier = buttonModifier,
                 enabled = hasText.value
             ) {
@@ -196,7 +196,7 @@ fun InputAndSend(
             }
             //输入框
             TTextField(
-                text = text,
+                text = text(),
                 onTextChange = onTextChange,
                 maxLines = 6,
                 modifier = textFieldModifier,

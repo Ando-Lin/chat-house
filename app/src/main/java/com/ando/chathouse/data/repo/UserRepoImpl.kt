@@ -22,16 +22,16 @@ class UserRepoImpl @Inject constructor(
 
     init {
         external.launch {
-            //检查是否存在一号用户，即用户本人.防止误删导致错误
+            //检查是否存在“本人”的记录.防止误删导致错误
             fetchById(MY_UID).collect {
                 if (it != null) {
                     return@collect
                 }
-                //不存在则添加一号用户
+                //不存在则添加
                 save(
                     UserEntity(
                         id = MY_UID,
-                        name = "用户",
+                        name = "",
                         avatar = null,
                         description = "",
                         createTime = LocalDateTime.now()

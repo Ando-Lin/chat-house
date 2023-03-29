@@ -100,7 +100,8 @@ fun ChatScreen(
                     onClickDelete = viewModel::selectedTODelete,
                 )
             }
-        }) { paddingValue ->
+        }
+    ) { paddingValue ->
         ChatArea(
             modifier = Modifier
                 .padding(paddingValue)
@@ -117,6 +118,7 @@ fun ChatScreen(
             },
             onClickBubble = viewModel::collectSelectedId
         )
+
     }
 
 
@@ -221,9 +223,6 @@ private fun DialogForOperationItem(
 }
 
 
-
-
-
 @Composable
 fun ChatArea(
     modifier: Modifier = Modifier,
@@ -240,13 +239,8 @@ fun ChatArea(
     val isLookAtLatest by remember {
         derivedStateOf { lazyColumnState.firstVisibleItemIndex <= 4 }
     }
-//    Log.i(TAG, "pagingItem.loadState.source: ${pagingItems.loadState.source}")
     LaunchedEffect(pagingItems.loadState.refresh) {
-//        Log.i(TAG, "pagingItems.loadState.append: ${pagingItems.loadState.append}")
-//        Log.i(TAG, "isLookAtLatest: $isLookAtLatest")
         //分页加载状态
-//        if (pagingItems.loadState.refresh is LoadState.NotLoading){
-//        }
         if (isLookAtLatest) {
             lazyColumnState.animateScrollToItem(0)
         }
@@ -318,7 +312,12 @@ fun SimpleMessage(
             }
         }
 
-        ReversibleRow(reverseLayout = isMe, horizontalArrangement = Arrangement.Start, verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
+        ReversibleRow(
+            reverseLayout = isMe,
+            horizontalArrangement = Arrangement.Start,
+            verticalAlignment = Alignment.Top,
+            modifier = Modifier.fillMaxWidth()
+        ) {
             //头像
             AvatarImage(
                 model = messageUiState.avatar,

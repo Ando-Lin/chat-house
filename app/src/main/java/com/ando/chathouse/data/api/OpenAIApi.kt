@@ -53,7 +53,7 @@ data class Authorization(
 /**
  * chatgpt api所需参数
  * @param model: 模型类型
- * @param message: 包含上下文的信息
+ * @param messages: 包含上下文的信息
  * @param temperature: 0到2之间。较高的值(如0.8)将使输出更加随机，而较低的值(如0.2)将使输出更加集中和确定。
  * @param topP: 温度采样的另一种替代方法称为核采样，其中模型考虑具有最高p概率质量的标记的结果。所以0.1意味着只考虑包含前10%概率质量的令牌。
  * @param n: 为每个输入消息生成多少个聊天完成选项。

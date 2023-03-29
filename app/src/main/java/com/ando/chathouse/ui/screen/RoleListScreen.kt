@@ -73,7 +73,6 @@ fun RoleListScreen(
     val message = viewModel.screenUiState.message
     val hapticFeedback = LocalHapticFeedback.current
     val refreshState = !lazyPagingItems.loadState.append.endOfPaginationReached
-    Log.i(TAG, "RoleListScreen: loadState = ${lazyPagingItems.loadState}")
 
     LaunchedEffect(message) {
         if (message.isBlank()) return@LaunchedEffect
@@ -273,7 +272,7 @@ private val pagingDataFlow = flowOf(
 
 @Preview
 @Composable
-fun RoleListScreenPrev() {
+private fun RoleListScreenPrev() {
     ChatHouseTheme {
         val lazyPagingItems = pagingDataFlow.collectAsLazyPagingItems()
         Surface {

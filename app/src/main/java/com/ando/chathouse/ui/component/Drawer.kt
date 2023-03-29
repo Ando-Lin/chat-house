@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -23,12 +24,14 @@ fun TDrawer(
     content: @Composable () -> Unit
 ) {
     if (!enable){
-        content()
-        return
+        LaunchedEffect(Unit){
+            drawerState.close()
+        }
     }
     val drawerShape = RoundedCornerShape(7.dp)
     ModalNavigationDrawer(
         drawerState = drawerState,
+        gesturesEnabled = enable,
         drawerContent = {
             ModalDrawerSheet(drawerShape = drawerShape, modifier = modifier.requiredWidth(260.dp)) {
                 drawerContent()
@@ -42,7 +45,7 @@ fun TDrawer(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ColumnScope.TDrawerContent(
+private fun ColumnScope.TDrawerContent(
     modifier: Modifier = Modifier,
     navigateAction: (route: String) -> Unit,
 ) {

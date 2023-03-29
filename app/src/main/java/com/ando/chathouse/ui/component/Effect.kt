@@ -18,6 +18,7 @@ fun LaunchedKeyEffect(
     val firstCompose = remember {
         mutableStateOf(true)
     }
+//    Log.i(TAG, "LaunchedKeyEffect: firstCompose=$firstCompose")
     LaunchedEffect(key1){
         if (!firstCompose.value){
             block()
@@ -26,3 +27,5 @@ fun LaunchedKeyEffect(
         }
     }
 }
+
+private const val TAG = "Effect"

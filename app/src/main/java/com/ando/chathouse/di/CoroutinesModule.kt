@@ -1,6 +1,7 @@
 package com.ando.chathouse.di
 
 import android.util.Log
+import com.tencent.bugly.crashreport.CrashReport
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -27,6 +28,7 @@ object CoroutinesModule {
     fun providesCoroutineExceptionHandler(): CoroutineExceptionHandler =
         CoroutineExceptionHandler { context, throwable ->
             Log.e(TAG, "providesCoroutineExceptionHandler: context=$context", throwable)
+            CrashReport.postCatchedException(throwable)
         }
 
     private const val TAG = "CoroutinesModule"

@@ -5,7 +5,6 @@ package com.ando.chathouse
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -16,36 +15,36 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.navigation.*
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.ando.chathouse.constant.PreferencesKey
 import com.ando.chathouse.ext.navigateSingleTop
+import com.ando.chathouse.ui.component.LaunchedKeyEffect
 import com.ando.chathouse.ui.component.SnackbarUI
-import com.ando.chathouse.ui.screen.*
+import com.ando.chathouse.ui.screen.MainScreen
+import com.ando.chathouse.ui.screen.ProfileScreen
+import com.ando.chathouse.ui.screen.SettingScreen
 import com.ando.chathouse.ui.theme.ChatHouseTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        setTheme(R.style.Theme_ChatHouse)
         super.onCreate(savedInstanceState)
+        //设置compose
         setContent {
             val navController = rememberNavController()
-            var enableDrawer by rememberSaveable {
-                mutableStateOf(true)
-            }
             val pagerState = rememberPagerState(MainScreen.defaultPage)
             Init()
             ChatHouseTheme {
-                // A surface container using the 'background' color from the theme
                 Scaffold(
                     snackbarHost = { SnackbarUI.ComposeUI() }
                 ) { paddingValue ->
@@ -54,19 +53,10 @@ class MainActivity : ComponentActivity() {
                             .padding(paddingValue)
                             .fillMaxSize(),
                     ) {
-                        MainScreen.ScreenDrawer(
-                            navigationRequest = {navController.navigateSingleTop(it)},
-                            enableDrawer = enableDrawer,
+                        Navigation(
+                            navController = navController,
                             pagerState = pagerState
-                        ) {
-                            Navigation(
-                                pagerState = pagerState,
-                                navController = navController,
-                                enableDrawer = {
-                                    enableDrawer = it
-                                }
-                            )
-                        }
+                        )
                     }
                 }
 
@@ -76,12 +66,10 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Navigation(
-    pagerState: PagerState,
     navController: NavHostController,
-    enableDrawer: (Boolean) -> Unit
+    pagerState: PagerState
 ) {
     NavHost(
         navController = navController,
@@ -91,37 +79,36 @@ fun Navigation(
             route = MainScreenDestination.routeWithArg,
             arguments = MainScreenDestination.arguments
         ) { navBackStackEntry ->
-            enableDrawer(true)
             val arguments = navBackStackEntry.arguments
-            val tab = arguments?.getString(MainScreenDestination.tabRoute) ?: ChatScreenTabDestination.route
+            val tab = arguments?.getString(MainScreenDestination.tabRoute)
+                ?: ChatScreenTabDestination.route
             //更新参数
             val params = arguments?.getString(MainScreenDestination.tabParas)
             val context = LocalContext.current
-            LaunchedEffect(params){
-                val chatId = params?.toIntOrNull()?:return@LaunchedEffect
-                context.profile.updateData {
-                    val mutablePreferences = it.toMutablePreferences()
-                    mutablePreferences[PreferencesKey.currentChatId]=chatId
-                    mutablePreferences
+            LaunchedKeyEffect(params) {
+                val chatId = params?.toIntOrNull()
+                if (chatId != null) {
+                    context.profile.updateData {
+                        val mutablePreferences = it.toMutablePreferences()
+                        mutablePreferences[PreferencesKey.currentChatId] = chatId
+                        mutablePreferences
+                    }
                 }
             }
-            Log.i(TAG, "mainGraph: tab=$tab  paras=$params")
             MainScreen.ScreenUI(
-                key = navBackStackEntry.arguments,
+                key = arguments,
                 requestTab = tab,
                 pagerState = pagerState,
                 navigationRequest = { navController.navigateSingleTop(it) }
             )
         }
         composable(route = SettingScreenDestination.route) {
-            enableDrawer(false)
             SettingScreen(backAction = { navController.popBackStack() })
         }
         composable(
             route = ProfileScreenDestination.routeWithArg,
             arguments = ProfileScreenDestination.arguments
         ) {
-            enableDrawer(false)
             ProfileScreen(backAction = { navController.popBackStack() })
         }
     }

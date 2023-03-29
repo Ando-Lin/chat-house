@@ -12,23 +12,19 @@ import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.rememberDrawerState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.toMutableStateList
+import androidx.compose.runtime.*
 import com.ando.chathouse.ChatScreenTabDestination
+import com.ando.chathouse.MainScreenDestination
 import com.ando.chathouse.RoleListScreenTabDestination
-import com.ando.chathouse.ui.component.LaunchedKeyEffect
 import kotlinx.coroutines.launch
 import okhttp3.internal.toImmutableList
 
 
 object MainScreen {
 
-    lateinit var drawerState: DrawerState
 
-    val navigationDestinations =
-        listOf(ChatScreenTabDestination, RoleListScreenTabDestination).toMutableStateList()
+    val navigationDestinations by
+    mutableStateOf(listOf(ChatScreenTabDestination, RoleListScreenTabDestination))
     val destinations = navigationDestinations.map { it.route }.toImmutableList()
     val defaultTabDestination = ChatScreenTabDestination.route
     val defaultPage = destinations.indexOf(defaultTabDestination)
@@ -42,13 +38,10 @@ object MainScreen {
         pagerState: PagerState,
         content: @Composable () -> Unit,
     ) {
-        LaunchedEffect(drawerState) {
-            MainScreen.drawerState = drawerState
-        }
         val scope = rememberCoroutineScope()
         ScreenFrameworkUI(
             drawerState = drawerState,
-            visualTabDestinationList = navigationDestinations,
+            visualTabDestinationList = { navigationDestinations },
             enableDrawer = enableDrawer,
             navigationRequest = {
                 navigationRequest(it)
@@ -58,13 +51,14 @@ object MainScreen {
             },
             scrollToPageRequest = {
                 scope.launch {
-                    pagerState.animateScrollToPage(it)
+//                    pagerState.animateScrollToPage(it)
+                    navigationRequest(MainScreenDestination.routeWithArg(destinations[it]))
                 }
                 scope.launch {
                     drawerState.close()
                 }
             },
-            currentPage = pagerState.currentPage,
+            currentPage = { pagerState.currentPage },
             content = content
         )
     }
@@ -76,16 +70,22 @@ object MainScreen {
         pagerState: PagerState,
         navigationRequest: (String) -> Unit,
     ) {
-        LaunchedKeyEffect(key){
+        LaunchedEffect(key) {
             pagerState.animateScrollToPage(destinations.indexOf(requestTab))
         }
-//        Log.i(TAG, "MainScreen: cuurrentTab=$requestTab tabs=$destinations key=$keyState")
-        MainScreen(
-            tabs = destinations,
-            drawerState = drawerState,
-            navigationAction = navigationRequest,
-            pagerState = pagerState
-        )
+        val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+        ScreenDrawer(
+            navigationRequest = navigationRequest,
+            pagerState = pagerState,
+            drawerState = drawerState
+        ) {
+            MainScreen(
+                tabs = destinations,
+                drawerState = drawerState,
+                navigationAction = navigationRequest,
+                pagerState = pagerState
+            )
+        }
     }
 
 }
@@ -99,11 +99,10 @@ private fun MainScreen(
     navigationAction: (String) -> Unit,
     pagerState: PagerState
 ) {
-
     VerticalPager(
         pageCount = tabs.size,
         state = pagerState,
-        beyondBoundsPageCount = 0,
+        beyondBoundsPageCount = 1,
         userScrollEnabled = false
     ) {
         when (tabs[it]) {

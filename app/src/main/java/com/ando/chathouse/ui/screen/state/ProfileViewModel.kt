@@ -42,7 +42,8 @@ class ProfileViewModel @Inject constructor(
     //屏幕ui状态
     private val _extraUiStateState = mutableStateOf(
         ProfileExtraSettingUiState(
-            reminder = user.reminder,
+            originalReminder = user.reminder,
+            latestReminder = user.reminder,
             enableRoleGuide = user.enableGuide,
             enableReminderMode = user.enableReminder
         )
@@ -68,8 +69,9 @@ class ProfileViewModel @Inject constructor(
                         it?.let {
                             user = it
                             screenUiState = screenUiState.copy(tempUser = it)
-                            extraUiState = extraUiState.copy(
-                                reminder = it.reminder,
+                            extraUiState = ProfileExtraSettingUiState(
+                                originalReminder = it.reminder,
+                                latestReminder = it.reminder,
                                 enableRoleGuide = it.enableGuide,
                                 enableReminderMode = it.enableReminder
                             )
@@ -87,31 +89,31 @@ class ProfileViewModel @Inject constructor(
 
     fun saveUser() {
         viewModelScope.launch {
-            var lastUser = screenUiState.tempUser
+            var latestUser = screenUiState.tempUser
 
             //若头像被修改了则将图片移动至私有文件夹
-            if (lastUser.avatar != user.avatar) {
-                val newUri = copyPictureToPrivateFolder(lastUser.avatar)
-                lastUser = lastUser.copy(avatar = newUri)
-                updateTempUser(tempUser = lastUser)
+            if (latestUser.avatar != user.avatar) {
+                val newUri = copyPictureToPrivateFolder(latestUser.avatar)
+                latestUser = latestUser.copy(avatar = newUri)
+                updateTempUser(tempUser = latestUser)
             }
 
-            val result = if (lastUser.id==0){
-                userRepo.save(lastUser.toEntity())
+            val result = if (latestUser.id==0){
+                userRepo.save(latestUser.toEntity())
                     .onSuccess {
                         //更新id，防止多次保存新user
-                        lastUser = lastUser.copy(id = it)
-                        updateTempUser(lastUser)
+                        latestUser = latestUser.copy(id = it)
+                        updateTempUser(latestUser)
                     }
             }else{
-                userRepo.update(lastUser.toEntity())
+                userRepo.update(latestUser.toEntity())
             }
 
             result
                 .onFailure { updateMessage("更新用户时发生错误: ${it.message}") }
                 .onSuccess {
                     //更新数据库user, 重置isModified
-                    user = lastUser
+                    user = latestUser
                     updateIsModified(false)
                 }
         }
@@ -136,9 +138,14 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    fun updateReminder(value: String) {
-        if (value == user.reminder) return
-        user = user.copy(reminder = value)
+    fun updateLatestReminder(value:String){
+        extraUiState = extraUiState.copy(latestReminder = value)
+    }
+
+    fun updateReminder() {
+        if (extraUiState.latestReminder == extraUiState.originalReminder) return
+        user = user.copy(reminder = extraUiState.latestReminder)
+        extraUiState = extraUiState.copy(originalReminder = extraUiState.latestReminder)
         updateUser(user)
     }
 
@@ -192,7 +199,8 @@ data class ProfileScreenUiState(
 }
 
 data class ProfileExtraSettingUiState(
-    val reminder: String,
+    val originalReminder: String,
+    val latestReminder: String,
     val enableRoleGuide: Boolean,
     val enableReminderMode: Boolean,
 )

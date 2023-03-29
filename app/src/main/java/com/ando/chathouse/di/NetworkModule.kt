@@ -17,9 +17,10 @@ object NetworkModule {
     @Provides
     fun provideHttpClient(): OkHttpClient =
         OkHttpClient.Builder()
-            .connectTimeout(timeout = 30, unit = TimeUnit.SECONDS)
-            .callTimeout(timeout = 30, unit = TimeUnit.SECONDS)
-            .readTimeout(timeout = 30, unit = TimeUnit.SECONDS)
+            .connectTimeout(timeout = 40, unit = TimeUnit.SECONDS)
+            .callTimeout(timeout = 40, unit = TimeUnit.SECONDS)
+            .readTimeout(timeout = 40, unit = TimeUnit.SECONDS)
+            .writeTimeout(timeout = 40, unit = TimeUnit.SECONDS)
             .addInterceptor {
                 val newReq = it.request().newBuilder()
                     .header("User-Agent", System.getProperty("http.agent") ?: "Android")

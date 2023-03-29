@@ -6,7 +6,6 @@ import com.ando.chathouse.data.api.ChatGPTCompletionPara
 import com.ando.chathouse.data.api.OpenAIApi
 import com.ando.chathouse.domain.pojo.RoleMessage
 import com.ando.chathouse.exception.MessageStreamInterruptException
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import okhttp3.CacheControl
 import okhttp3.OkHttpClient
@@ -31,7 +30,6 @@ class StreamOpenAIGPT3d5Model internal constructor(
     private val api = retrofit.create(OpenAIApi::class.java)
     private val pattern = Pattern.compile("\"content\":\"([^\"]+)\"")
 
-    @OptIn(FlowPreview::class)
     override fun sendMessages(messages: List<RoleMessage>, para: ChatModel.Para?): Flow<String?> {
         val apiKey = para?.apiKey
         if (needAPIKey && apiKey.isNullOrBlank()) {
@@ -42,18 +40,21 @@ class StreamOpenAIGPT3d5Model internal constructor(
             val responseBody = api.streamChatGPT(
                 Authorization(apiKey!!), ChatGPTCompletionPara(messages = messages, stream = true)
             )
-            val source = responseBody.source()
-            val buffer = Buffer()
-            var string: String = ""
-            while (!source.exhausted()) {
-                val readBytes = source.read(buffer, 8196)
-                string = buffer.readString(Charsets.UTF_8)
-                Log.i(TAG, "sendMessages: readStream = --start $string --end")
-                emit(string)
+            responseBody.use {
+                val source = responseBody.source()
+                val buffer = Buffer()
+                var string = ""
+                while (!source.exhausted()) {
+                    val readBytes = source.read(buffer, 8196)
+                    string = buffer.readString(Charsets.UTF_8)
+                    Log.i(TAG, "sendMessages: readStream = --start $string --end")
+                    emit(string)
+                }
+                if (string.lastIndexOf("data: [DONE]") == -1) {
+                    throw MessageStreamInterruptException()
+                }
             }
-            if (string.lastIndexOf("data: [DONE]") == -1) {
-                throw MessageStreamInterruptException()
-            }
+
         }.transform {
             val flow = it?.split("\n")?.asFlow()
             emitAll(flow ?: flowOf(null))
@@ -66,9 +67,7 @@ class StreamOpenAIGPT3d5Model internal constructor(
                 true -> matcher.group(1)
                 else -> null
             }
-        }.buffer(capacity = 1000).onEach { Log.i(TAG, "sendMessages: onEach = $it") }
-//            .filter { false }
-//            .map { throw Exception("test") }
+        }.buffer(capacity = 1000)
     }
 
     companion object {

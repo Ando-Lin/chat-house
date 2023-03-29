@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,7 +43,6 @@ import com.ando.chathouse.ui.component.*
 import com.ando.chathouse.ui.screen.state.ProfileExtraSettingUiState
 import com.ando.chathouse.ui.screen.state.ProfileViewModel
 import com.ando.chathouse.util.Utils
-import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,6 +90,7 @@ fun ProfileScreen(
 
     //修改返回键操作
     BackHandler {
+        viewModel.updateReminder()
         checkAndBack()
     }
 
@@ -118,7 +117,7 @@ fun ProfileScreen(
                 .padding(paddingValues)
                 .fillMaxSize(),
             state = pagerState,
-            beyondBoundsPageCount = 2
+            beyondBoundsPageCount = 1
         ) { page ->
             val itemModifier = Modifier.fillMaxSize()
             when (page) {
@@ -133,6 +132,7 @@ fun ProfileScreen(
                     onRoleGuideCheckedChange = viewModel::updateRoleGuideEnableState,
                     onReminderModeCheckedChange = viewModel::updateReminderModeEnableState,
                     onReminderInputComplete = viewModel::updateReminder,
+                    onLatestReminderChange = viewModel::updateLatestReminder,
                     modifier = itemModifier
                 )
             }
@@ -207,21 +207,18 @@ private fun ExtraSettings(
     uiState: ProfileExtraSettingUiState,
     onRoleGuideCheckedChange: (Boolean) -> Unit,
     onReminderModeCheckedChange: (Boolean) -> Unit,
-    onReminderInputComplete: (String) -> Unit,
+    onReminderInputComplete: () -> Unit,
+    onLatestReminderChange: (String) -> Unit,
     interactionSource: MutableInteractionSource = remember {
         MutableInteractionSource()
     }
 ) {
-    var reminder by rememberSaveable(uiState.reminder) {
-        mutableStateOf(uiState.reminder)
-    }
 
     //当输入框聚焦状态变化时根据状态启动输入完成函数
     LaunchedEffect(Unit){
-        interactionSource.interactions.collectLatest {
-            Log.i(TAG, "ExtraSettings: interaction=$it")
-            if (it is FocusInteraction.Unfocus && reminder != uiState.reminder) {
-                onReminderInputComplete(reminder)
+        interactionSource.interactions.collect {
+            if (it is FocusInteraction.Unfocus) {
+                onReminderInputComplete()
             }
         }
     }
@@ -248,9 +245,9 @@ private fun ExtraSettings(
         )
         AnimatedVisibility(visible = uiState.enableReminderMode) {
             TTextField(
-                text = reminder,
+                text = uiState.latestReminder,
                 tip = stringResource(id = R.string.input_on_here_v, stringResource(id = R.string.reminder)),
-                onTextChange = { reminder = it },
+                onTextChange = onLatestReminderChange,
                 interactionSource = interactionSource,
                 maxLines = 10,
                 modifier = Modifier

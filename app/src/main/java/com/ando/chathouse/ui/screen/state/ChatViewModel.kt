@@ -205,7 +205,7 @@ class ChatViewModel @Inject constructor(
      * 更新底部输入框的文字
      */
     fun updateInputText(value: String) {
-        bottomBarUiState.value = bottomBarUiState.value.copy(text = value)
+        bottomBarUiState.value = bottomBarUiState.value.copy(text = { value })
     }
 
     /**

@@ -1,6 +1,5 @@
 package com.ando.chathouse.strategy
 
-import android.util.Log
 import com.ando.chathouse.domain.entity.ChatMessageEntity
 import com.ando.chathouse.domain.entity.MessageStatus
 import com.ando.chathouse.domain.pojo.ChatContext
@@ -29,7 +28,6 @@ class PreferMeCarryMessageStrategy: MutableStatefulCarryMessageStrategy<Int> {
             return false
         if (message.uid == chatContext.myUid)
             return true
-        Log.i(TAG, "filter: counter = ${counter.get()}")
         return counter.getAndIncrement() < remainAIMessage
     }
 

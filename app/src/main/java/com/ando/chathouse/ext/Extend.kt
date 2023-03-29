@@ -4,6 +4,7 @@ import android.content.Context
 import android.text.format.DateUtils
 import android.util.Log
 import android.widget.Toast
+import androidx.collection.LruCache
 import androidx.compose.foundation.gestures.PressGestureScope
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
@@ -14,18 +15,18 @@ import androidx.navigation.NavHostController
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.ZoneId
-import java.util.regex.Pattern
 
 
 fun String.toAnnotatedString(): AnnotatedString {
     //TODO: 文本解析为注解文本
-    val pattern = Pattern.compile("")
-    val matcher = pattern.matcher(this)
-
-    return AnnotatedString(text = this, spanStyle = SpanStyle())
+//    val pattern = Pattern.compile("")
+//    val matcher = patthis.matcher(this)
+    //替换字符换行
+    val newText = this.replace("\\n", "\n")
+    return AnnotatedString(text = newText, spanStyle = SpanStyle())
 }
 
-fun LocalDateTime?.relativeToNowSecondDiff():Pair<LocalDateTime, Long>{
+fun LocalDateTime?.relativeToNowSecondDiff(): Pair<LocalDateTime, Long> {
     val now = LocalDateTime.now()
     val secondDiff = Duration.between(this ?: LocalDateTime.MIN, now).seconds
     return now to secondDiff
@@ -54,8 +55,8 @@ fun LocalDateTime.formatByNow(context: Context): String {
     return DateUtils.formatDateTime(context, epochMill, flags)
 }
 
-fun NavHostController.navigateSingleTop(route: String){
-    Log.i(TAG,"navigateSingleTop: route=$route")
+fun NavHostController.navigateSingleTop(route: String) {
+    Log.i(TAG, "navigateSingleTop: route=$route")
     navigate(route = route) {
         launchSingleTop = true
         restoreState = true
@@ -65,23 +66,35 @@ fun NavHostController.navigateSingleTop(route: String){
 suspend fun PressGestureScope.withMutableInteractionSource(
     offset: Offset,
     interactionSource: MutableInteractionSource,
-    onRelease: (suspend ()->Unit)? = null,
-    onCancel: (suspend ()->Unit)? = null
-){
+    onRelease: (suspend () -> Unit)? = null,
+    onCancel: (suspend () -> Unit)? = null
+) {
     val press = PressInteraction.Press(offset)
     interactionSource.emit(press)
     val release = tryAwaitRelease()
-    if (release){
+    if (release) {
         onRelease?.invoke()
         interactionSource.emit(PressInteraction.Release(press))
-    }else{
+    } else {
         onCancel?.invoke()
         interactionSource.emit(PressInteraction.Cancel(press))
     }
 }
 
 
-suspend fun Context.showToast(content:String) =
+fun <K : Any, V : Any> LruCache<K, V>.getOrPut(key: K, defaultValue: () -> V): V {
+    val value = get(key)
+    return if (value == null) {
+        val answer = defaultValue()
+        put(key, answer)
+        answer
+    } else {
+        value
+    }
+}
+
+
+suspend fun Context.showToast(content: String) =
     Toast.makeText(this, content, Toast.LENGTH_SHORT).show()
 
 private const val TAG = "Extend"
