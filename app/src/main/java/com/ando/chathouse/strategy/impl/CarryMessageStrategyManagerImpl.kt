@@ -1,7 +1,11 @@
-package com.ando.chathouse.strategy
+package com.ando.chathouse.strategy.impl
 
 import com.ando.chathouse.domain.entity.ChatMessageEntity
 import com.ando.chathouse.domain.pojo.ChatContext
+import com.ando.chathouse.exception.NoSuchStrategy
+import com.ando.chathouse.strategy.CarryMessageStrategy
+import com.ando.chathouse.strategy.CarryMessageStrategyManager
+import com.ando.chathouse.strategy.StatefulCarryMessageStrategy
 
 class CarryMessageStrategyManagerImpl : CarryMessageStrategyManager {
     private val map = mutableMapOf<String, Class<out CarryMessageStrategy>>()
@@ -25,8 +29,8 @@ class CarryMessageStrategyManagerImpl : CarryMessageStrategyManager {
     }
 
 
-    private fun getInstance(strategy: String):CarryMessageStrategy{
-        val strategyClass = map[strategy] ?: throw IllegalArgumentException("策略不存在")
+    private fun getInstance(strategy: String): CarryMessageStrategy {
+        val strategyClass = map[strategy] ?: throw NoSuchStrategy("策略不存在: strategy=$strategy")
         val strategyInstance: CarryMessageStrategy =
             if (StatefulCarryMessageStrategy::class.java.isAssignableFrom(strategyClass)) {
                 strategyClass.newInstance()

@@ -1,4 +1,4 @@
-package com.ando.chathouse.model
+package com.ando.chathouse.model.impl
 
 import android.util.Log
 import com.ando.chathouse.data.api.Authorization
@@ -6,6 +6,9 @@ import com.ando.chathouse.data.api.ChatGPTCompletionPara
 import com.ando.chathouse.data.api.OpenAIApi
 import com.ando.chathouse.domain.pojo.RoleMessage
 import com.ando.chathouse.exception.MessageStreamInterruptException
+import com.ando.chathouse.model.AbstractLongChatModel
+import com.ando.chathouse.model.ChatModel
+import com.ando.chathouse.model.RequireOpenAIAPIKey
 import kotlinx.coroutines.flow.*
 import okhttp3.CacheControl
 import okhttp3.OkHttpClient

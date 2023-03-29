@@ -132,6 +132,7 @@ fun DialogForStringInput(
             onValueChange = { text.value = it },
             label = if (label != null) { { Text(text = label) } } else null,
             placeholder = if (placeholder!=null){{ Text(text = placeholder)}} else null,
+            maxLines = 10,
             modifier = modifier
         )
     }

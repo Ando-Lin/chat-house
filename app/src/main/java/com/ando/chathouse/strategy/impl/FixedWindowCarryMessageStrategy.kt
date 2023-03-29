@@ -1,11 +1,12 @@
-package com.ando.chathouse.strategy
+package com.ando.chathouse.strategy.impl
 
 import com.ando.chathouse.domain.entity.ChatMessageEntity
 import com.ando.chathouse.domain.entity.MessageStatus
 import com.ando.chathouse.domain.pojo.ChatContext
+import com.ando.chathouse.strategy.MutableStatefulCarryMessageStrategy
 import java.util.concurrent.atomic.AtomicInteger
 
-class FixedWindowCarryMessageStrategy() :MutableStatefulCarryMessageStrategy<Int> {
+class FixedWindowCarryMessageStrategy() : MutableStatefulCarryMessageStrategy<Int> {
     override val defaultState: Int = 10
     private var windowSize:Int = defaultState
     private var counter: AtomicInteger = AtomicInteger(0)
@@ -23,7 +24,7 @@ class FixedWindowCarryMessageStrategy() :MutableStatefulCarryMessageStrategy<Int
     }
 
     companion object{
-        const val NAME = "fixed window"
+        const val NAME = "固定10个窗口"
         private const val TAG = "FixedWindowCarryMessage"
     }
 }

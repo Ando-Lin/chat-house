@@ -158,7 +158,8 @@ fun ChatScreen(
                 viewModel.updateMessageContent(longPressedMessageUiState!!.id, it)
                 dialogForInputVisible = false
             },
-            initText = longPressedMessageUiState!!.text
+            initText = longPressedMessageUiState!!.text,
+            modifier = Modifier.requiredWidth(260.dp)
         )
     }
 

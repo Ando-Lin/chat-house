@@ -1,6 +1,7 @@
 package com.ando.chathouse.di
 
 import com.ando.chathouse.strategy.*
+import com.ando.chathouse.strategy.impl.*
 import dagger.Binds
 import dagger.Module
 import dagger.Provides

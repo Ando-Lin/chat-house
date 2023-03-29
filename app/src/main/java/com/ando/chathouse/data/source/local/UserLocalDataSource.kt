@@ -6,6 +6,8 @@ import com.ando.chathouse.data.source.UserDataSource
 import com.ando.chathouse.data.source.local.dao.UserDao
 import com.ando.chathouse.domain.entity.UserEntity
 import com.ando.chathouse.domain.pojo.IntId
+import com.ando.chathouse.domain.pojo.User
+import com.ando.chathouse.domain.pojo.UserExtraInfo
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
@@ -26,8 +28,16 @@ class UserLocalDataSource @Inject constructor(
         return userDao.insert(user).toInt()
     }
 
-    override suspend fun update(user: UserEntity){
-        userDao.update(user)
+    override suspend fun update(entity: UserEntity?, user: User?, extrasInfo: UserExtraInfo?) {
+        entity?.let {
+            userDao.update(entity)
+        }
+        user?.let {
+            userDao.updateUser(user)
+        }
+        extrasInfo?.let {
+            userDao.updateUserExtras(extrasInfo)
+        }
     }
 
     override suspend fun deleteById(id: Int){

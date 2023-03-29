@@ -12,8 +12,8 @@ import androidx.paging.map
 import com.ando.chathouse.constant.MY_UID
 import com.ando.chathouse.data.repo.UserRepo
 import com.ando.chathouse.domain.entity.UserEntity
-import com.ando.chathouse.domain.entity.toUser
 import com.ando.chathouse.domain.pojo.User
+import com.ando.chathouse.ext.toUser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first

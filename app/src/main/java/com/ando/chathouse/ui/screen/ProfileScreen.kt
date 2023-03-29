@@ -38,7 +38,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.ando.chathouse.R
-import com.ando.chathouse.domain.pojo.UserDetail
+import com.ando.chathouse.domain.pojo.User
 import com.ando.chathouse.ui.component.*
 import com.ando.chathouse.ui.screen.state.ProfileExtraSettingUiState
 import com.ando.chathouse.ui.screen.state.ProfileViewModel
@@ -162,9 +162,9 @@ fun ProfileFullScreenDialog() {
 @Composable
 private fun CommonSettings(
     modifier: Modifier = Modifier,
-    tempUser: UserDetail,
+    tempUser: User,
     resultLauncher: ManagedActivityResultLauncher<String, Uri?>,
-    updateTempUser: (UserDetail) -> Unit
+    updateTempUser: (User) -> Unit
 ) {
     Column(
         modifier = modifier,
@@ -213,7 +213,7 @@ private fun ExtraSettings(
         MutableInteractionSource()
     }
 ) {
-
+    val info = uiState.info
     //当输入框聚焦状态变化时根据状态启动输入完成函数
     LaunchedEffect(Unit){
         interactionSource.interactions.collect {
@@ -232,18 +232,18 @@ private fun ExtraSettings(
         TextAndSwitch(
             title = stringResource(id = R.string.role_guide),
             tip = stringResource(id = R.string.preceding_guide_make_models_play_roles),
-            checked = uiState.enableRoleGuide,
+            checked = info.enableGuide,
             onCheckedChange = onRoleGuideCheckedChange,
             modifier = itemModifier
         )
         TextAndSwitch(
             title = stringResource(id = R.string.reminder_mode),
             tip = stringResource(id = R.string.add_addtional_sentences_before_sending),
-            checked = uiState.enableReminderMode,
+            checked = info.enableReminder,
             onCheckedChange = onReminderModeCheckedChange,
             modifier = itemModifier
         )
-        AnimatedVisibility(visible = uiState.enableReminderMode) {
+        AnimatedVisibility(visible = info.enableReminder) {
             TTextField(
                 text = uiState.latestReminder,
                 tip = stringResource(id = R.string.input_on_here_v, stringResource(id = R.string.reminder)),

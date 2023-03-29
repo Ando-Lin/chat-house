@@ -1,6 +1,9 @@
-package com.ando.chathouse.model
+package com.ando.chathouse.model.impl
 
 import com.ando.chathouse.domain.pojo.RoleMessage
+import com.ando.chathouse.model.ChatModel
+import com.ando.chathouse.model.ChatModelManger
+import com.ando.chathouse.model.LongChatModel
 import kotlinx.coroutines.flow.Flow
 
 class ChatModelMangerImpl : ChatModelManger {

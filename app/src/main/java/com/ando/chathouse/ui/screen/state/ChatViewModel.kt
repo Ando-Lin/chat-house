@@ -20,15 +20,15 @@ import com.ando.chathouse.data.repo.UserRepo
 import com.ando.chathouse.domain.entity.ChatEntity
 import com.ando.chathouse.domain.entity.ChatMessageEntity
 import com.ando.chathouse.domain.entity.MessageStatus
-import com.ando.chathouse.domain.entity.toUser
 import com.ando.chathouse.domain.pojo.ChatContext
 import com.ando.chathouse.domain.pojo.ChatMessage
 import com.ando.chathouse.domain.pojo.User
-import com.ando.chathouse.domain.pojo.toEntity
+import com.ando.chathouse.ext.toEntity
+import com.ando.chathouse.ext.toUser
 import com.ando.chathouse.model.ChatModelManger
 import com.ando.chathouse.profile
 import com.ando.chathouse.strategy.CarryMessageStrategyManager
-import com.ando.chathouse.strategy.NoCarryMessageStrategy
+import com.ando.chathouse.strategy.impl.NoCarryMessageStrategy
 import com.ando.chathouse.ui.component.BubbleTextUiState
 import com.ando.chathouse.ui.component.exclusive.ChatScreenBottomBarUiState
 import com.ando.chathouse.ui.component.exclusive.ChatScreenSettingsUiState
@@ -430,7 +430,7 @@ class ChatViewModel @Inject constructor(
                                         isMe = myId == value.uid,
                                         editModeState = editModeState,
                                         selected = selected,
-                                        reading = value.status==MessageStatus.Reading,
+                                        reading = value.status == MessageStatus.Reading,
                                         multiSelectModeState = multiSelectMode
                                     )
                                 )

@@ -2,7 +2,6 @@ package com.ando.chathouse.domain.pojo
 
 import android.net.Uri
 import androidx.room.ColumnInfo
-import com.ando.chathouse.domain.entity.UserEntity
 import java.time.LocalDateTime
 
 data class UserDetail(
@@ -20,15 +19,5 @@ data class UserDetail(
     val createTime: LocalDateTime = LocalDateTime.now()
 )
 
-fun UserDetail.toEntity() =
-    UserEntity(
-        id = id,
-        name = name,
-        avatar = avatar,
-        description = description,
-        enableGuide = enableGuide,
-        enableReminder = enableReminder,
-        reminder = reminder,
-        createTime = createTime
-    )
+
 

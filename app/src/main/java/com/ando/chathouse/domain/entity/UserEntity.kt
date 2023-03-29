@@ -4,8 +4,6 @@ import android.net.Uri
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.ando.chathouse.domain.pojo.User
-import com.ando.chathouse.domain.pojo.UserDetail
 import java.time.LocalDateTime
 
 @Entity(tableName = "user")
@@ -25,22 +23,4 @@ data class UserEntity(
     val createTime: LocalDateTime
 )
 
-fun UserEntity.toUser() =
-    User(
-        id = this.id,
-        name = this.name,
-        description = this.description,
-        avatar = this.avatar
-    )
 
-fun UserEntity.toUserDetail() =
-    UserDetail(
-        id = id,
-        name = name,
-        avatar = avatar,
-        description = description,
-        enableGuide = enableGuide,
-        enableReminder = enableReminder,
-        reminder = reminder,
-        createTime = createTime
-    )

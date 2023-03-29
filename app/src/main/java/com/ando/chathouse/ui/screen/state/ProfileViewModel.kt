@@ -8,9 +8,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ando.chathouse.ProfileScreenDestination
 import com.ando.chathouse.data.repo.UserRepo
-import com.ando.chathouse.domain.entity.toUserDetail
-import com.ando.chathouse.domain.pojo.UserDetail
-import com.ando.chathouse.domain.pojo.toEntity
+import com.ando.chathouse.domain.pojo.User
+import com.ando.chathouse.domain.pojo.UserExtraInfo
+import com.ando.chathouse.ext.toUserAndExtras
+import com.ando.chathouse.ext.toUserEntity
 import com.ando.chathouse.util.Utils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import java.io.File
 import java.time.Instant
+import java.time.LocalDateTime
 import javax.inject.Inject
 
 private const val TAG = "ProfileViewModel"
@@ -34,23 +36,23 @@ class ProfileViewModel @Inject constructor(
     //uid=0时将会插入新记录
     val uid: Int = savedStateHandle[ProfileScreenDestination.argName] ?: 0
 
-    //未知用户
-    private val unknownUser: UserDetail = UserDetail()
 
-    private var user: UserDetail = unknownUser
+    //记录最新接收的user.手动更新值
+    private var latestUser: User = User.emptyUser
 
-    //屏幕ui状态
+    private val _extrasInfoState = mutableStateOf(UserExtraInfo(id = 0))
+    //记录最新状态，手动更新值
+    private var extrasInfoState by _extrasInfoState
+    //ui状态
     private val _extraUiStateState = mutableStateOf(
         ProfileExtraSettingUiState(
-            originalReminder = user.reminder,
-            latestReminder = user.reminder,
-            enableRoleGuide = user.enableGuide,
-            enableReminderMode = user.enableReminder
+            userExtraInfo = _extrasInfoState,
+            latestReminder = "",
         )
     )
     private var extraUiState by _extraUiStateState
     var screenUiState by mutableStateOf(
-        ProfileScreenUiState(tempUser = user, extraSettingUiStateState = _extraUiStateState)
+        ProfileScreenUiState(tempUser = latestUser, extraSettingUiStateState = _extraUiStateState)
     )
         private set
 
@@ -64,17 +66,12 @@ class ProfileViewModel @Inject constructor(
             uid.let { value ->
                 userRepo
                     .fetchById(value)
-                    .map { it?.toUserDetail() }
+                    .map { it?.toUserAndExtras() }
                     .onEach {
-                        it?.let {
-                            user = it
-                            screenUiState = screenUiState.copy(tempUser = it)
-                            extraUiState = ProfileExtraSettingUiState(
-                                originalReminder = it.reminder,
-                                latestReminder = it.reminder,
-                                enableRoleGuide = it.enableGuide,
-                                enableReminderMode = it.enableReminder
-                            )
+                        it?.let { (user, extras) ->
+                            screenUiState = screenUiState.copy(tempUser = user)
+                            extrasInfoState = extras
+                            extraUiState = extraUiState.copy(latestReminder = extras.reminder)
                         }
                     }
                     .catch { updateMessage("获取用户时发生错误: ${it.message}") }
@@ -83,73 +80,74 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    fun resetMessage(){
+    fun resetMessage() {
         screenUiState = screenUiState.copy(message = "")
     }
 
+    //保存或更新用户
     fun saveUser() {
         viewModelScope.launch {
             var latestUser = screenUiState.tempUser
 
             //若头像被修改了则将图片移动至私有文件夹
-            if (latestUser.avatar != user.avatar) {
+            if (latestUser.avatar != this@ProfileViewModel.latestUser.avatar) {
                 val newUri = copyPictureToPrivateFolder(latestUser.avatar)
                 latestUser = latestUser.copy(avatar = newUri)
                 updateTempUser(tempUser = latestUser)
             }
 
-            val result = if (latestUser.id==0){
-                userRepo.save(latestUser.toEntity())
+            val result = if (latestUser.id == 0) {
+                userRepo.save(latestUser.toUserEntity(LocalDateTime.now()))
                     .onSuccess {
                         //更新id，防止多次保存新user
                         latestUser = latestUser.copy(id = it)
                         updateTempUser(latestUser)
                     }
-            }else{
-                userRepo.update(latestUser.toEntity())
+            } else {
+                userRepo.update(user = latestUser)
             }
 
             result
                 .onFailure { updateMessage("更新用户时发生错误: ${it.message}") }
                 .onSuccess {
                     //更新数据库user, 重置isModified
-                    user = latestUser
-                    updateIsModified(false)
+                    this@ProfileViewModel.latestUser = latestUser
+                    updateUserIsModified(false)
                 }
         }
     }
 
     fun updateRoleGuideEnableState(state: Boolean) {
-        extraUiState = extraUiState.copy(enableRoleGuide = state)
-        user = user.copy(enableGuide = state)
-        updateUser(user)
+        extrasInfoState = extrasInfoState.copy(enableGuide = state)
+        updateUserExtrasInfo(extrasInfoState)
     }
 
     fun updateReminderModeEnableState(state: Boolean) {
-        extraUiState = extraUiState.copy(enableReminderMode = state)
-        user = user.copy(enableReminder = state)
-        updateUser(user)
+        extrasInfoState = extrasInfoState.copy(enableReminder = state)
+        updateUserExtrasInfo(extrasInfoState)
     }
 
-    private fun updateUser(user: UserDetail) {
+
+    private fun updateUserExtrasInfo(extras: UserExtraInfo) {
         viewModelScope.launch {
-            userRepo.update(user.toEntity())
+            userRepo.update(extrasInfo = extras)
                 .onFailure { updateMessage("更新用户时发生错误: ${it.message}") }
         }
     }
 
-    fun updateLatestReminder(value:String){
+    //用于更新界面，不写入数据库
+    fun updateLatestReminder(value: String) {
         extraUiState = extraUiState.copy(latestReminder = value)
     }
 
+    //将reminder写入数据库
     fun updateReminder() {
-        if (extraUiState.latestReminder == extraUiState.originalReminder) return
-        user = user.copy(reminder = extraUiState.latestReminder)
-        extraUiState = extraUiState.copy(originalReminder = extraUiState.latestReminder)
-        updateUser(user)
+        if (extraUiState.latestReminder == extrasInfoState.reminder) return
+        extrasInfoState = extrasInfoState.copy(reminder = extraUiState.latestReminder)
+        updateUserExtrasInfo(extrasInfoState)
     }
 
-    private fun updateIsModified(state: Boolean) {
+    private fun updateUserIsModified(state: Boolean) {
         screenUiState = screenUiState.copy(isModified = state)
     }
 
@@ -157,9 +155,9 @@ class ProfileViewModel @Inject constructor(
         screenUiState = screenUiState.copy(message = message)
     }
 
-    fun updateTempUser(tempUser: UserDetail) {
+    fun updateTempUser(tempUser: User) {
         screenUiState = screenUiState.copy(tempUser = tempUser, isModified = true)
-        updateIsModified(user != screenUiState.tempUser)
+        updateUserIsModified(latestUser != screenUiState.tempUser)
     }
 
     private fun copyPictureToPrivateFolder(uri: Uri?): Uri? {
@@ -190,8 +188,8 @@ class ProfileViewModel @Inject constructor(
 
 @Stable
 data class ProfileScreenUiState(
-    val tempUser: UserDetail,
-    val isModified: Boolean = false,
+    val tempUser: User, //作为user的写缓存
+    val isModified: Boolean = false,    //控制重复更新行为
     val message: String = "",
     private val extraSettingUiStateState: State<ProfileExtraSettingUiState>
 ) {
@@ -199,8 +197,8 @@ data class ProfileScreenUiState(
 }
 
 data class ProfileExtraSettingUiState(
-    val originalReminder: String,
-    val latestReminder: String,
-    val enableRoleGuide: Boolean,
-    val enableReminderMode: Boolean,
-)
+    private val userExtraInfo: State<UserExtraInfo>,
+    val latestReminder: String = userExtraInfo.value.reminder,//避免频繁写入更新，作为reminder写入缓存
+) {
+    val info by userExtraInfo
+}

@@ -1,8 +1,9 @@
-package com.ando.chathouse.strategy
+package com.ando.chathouse.strategy.impl
 
 import com.ando.chathouse.domain.entity.ChatMessageEntity
 import com.ando.chathouse.domain.entity.MessageStatus
 import com.ando.chathouse.domain.pojo.ChatContext
+import com.ando.chathouse.strategy.MutableStatefulCarryMessageStrategy
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -33,6 +34,6 @@ class PreferMeCarryMessageStrategy: MutableStatefulCarryMessageStrategy<Int> {
 
     companion object {
         private const val TAG = "PreferMeCarryMessageStr"
-        const val NAME = "prefer me"
+        const val NAME = "偏好我"
     }
 }

@@ -1,8 +1,6 @@
 package com.ando.chathouse.domain.pojo
 
 import android.net.Uri
-import com.ando.chathouse.domain.entity.UserEntity
-import java.time.LocalDateTime
 
 data class User(
     val id: Int,
@@ -15,11 +13,4 @@ data class User(
     }
 }
 
-fun User.toUserEntity(createTime: LocalDateTime) =
-    UserEntity(
-        id = this.id,
-        name = this.name,
-        description = this.description,
-        createTime = createTime,
-        avatar = this.avatar,
-    )
+

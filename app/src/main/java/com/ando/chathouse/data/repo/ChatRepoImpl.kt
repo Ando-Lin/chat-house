@@ -13,12 +13,16 @@ import com.ando.chathouse.di.IoDispatcher
 import com.ando.chathouse.domain.entity.ChatEntity
 import com.ando.chathouse.domain.entity.ChatMessageEntity
 import com.ando.chathouse.domain.entity.MessageStatus
-import com.ando.chathouse.domain.pojo.*
+import com.ando.chathouse.domain.pojo.ChatContext
+import com.ando.chathouse.domain.pojo.ChatMessage
+import com.ando.chathouse.domain.pojo.PageQuery
+import com.ando.chathouse.domain.pojo.RoleMessage
 import com.ando.chathouse.exception.HttpRequestException
 import com.ando.chathouse.exception.MessageStreamInterruptException
 import com.ando.chathouse.exception.NoSuchChatException
 import com.ando.chathouse.exception.NoSuchUserException
 import com.ando.chathouse.ext.relativeToNowSecondDiff
+import com.ando.chathouse.ext.toEntity
 import com.ando.chathouse.model.ChatModel
 import com.ando.chathouse.model.ChatModelManger
 import com.ando.chathouse.profile
@@ -78,7 +82,7 @@ class ChatRepoImpl @Inject constructor(
             ),
             RoleMessage(
                 role = RoleMessage.SYSTEM_ROLE,
-                content = "你正在扮演角色，接下来是这个角色的描述，请以第一人称回答并描述神情和体态在括号内,根据角色的年龄和描述调整语言风格："
+                content = "你正在扮演角色，接下来是这个角色的描述，请以角色口吻回答并描述神情和体态在括号内,根据角色的年龄和描述调整语言风格："
             ),
             RoleMessage(
                 role = RoleMessage.SYSTEM_ROLE,

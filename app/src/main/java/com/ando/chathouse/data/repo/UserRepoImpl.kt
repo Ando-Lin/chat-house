@@ -5,6 +5,8 @@ import com.ando.chathouse.constant.MY_UID
 import com.ando.chathouse.data.source.local.UserLocalDataSource
 import com.ando.chathouse.di.IoDispatcher
 import com.ando.chathouse.domain.entity.UserEntity
+import com.ando.chathouse.domain.pojo.User
+import com.ando.chathouse.domain.pojo.UserExtraInfo
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -65,10 +67,14 @@ class UserRepoImpl @Inject constructor(
         }
     }
 
-    override suspend fun update(user: UserEntity): Result<Unit> {
+    override suspend fun update(
+        entity: UserEntity?,
+        user: User?,
+        extrasInfo: UserExtraInfo?
+    ): Result<Unit> {
         return withContext(external.coroutineContext + ioDispatcher) {
             kotlin.runCatching {
-                localDataSource.update(user)
+                localDataSource.update(entity,user,extrasInfo)
             }
         }
     }

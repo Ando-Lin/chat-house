@@ -6,7 +6,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ando.chathouse.constant.PreferencesKey
-import com.ando.chathouse.model.OpenAIGPT3d5Model
+import com.ando.chathouse.model.impl.OpenAIGPT3d5Model
 import com.ando.chathouse.profile
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext

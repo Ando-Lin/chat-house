@@ -4,7 +4,7 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
-import com.ando.chathouse.strategy.PreferMeCarryMessageStrategy
+import com.ando.chathouse.strategy.impl.PreferMeCarryMessageStrategy
 
 @Entity(
     tableName = "chat",
