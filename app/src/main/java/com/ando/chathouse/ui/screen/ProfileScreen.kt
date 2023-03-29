@@ -81,6 +81,7 @@ fun ProfileScreen(
 
     //若更新名称和描述后为保存则弹窗提示，否则直接返回
     val checkAndBack = {
+        viewModel.updateReminder()
         if (uiState.isModified) {
             dialogState = true
         } else {
@@ -90,7 +91,6 @@ fun ProfileScreen(
 
     //修改返回键操作
     BackHandler {
-        viewModel.updateReminder()
         checkAndBack()
     }
 

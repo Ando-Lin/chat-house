@@ -19,7 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.ando.chathouse.constant.WRITE_DB_TIME_THRESHOLD
@@ -211,7 +213,7 @@ fun BubbleText(
                 }
             }
             TText(
-                text = newText,
+                text = buildAnnotatedString { append(newText) },
                 interactionSource = interactionSource,
                 textColor = textColor,
                 onLongClick = onLongClick,
@@ -219,7 +221,7 @@ fun BubbleText(
             )
         } else {
             TText(
-                text = text(),
+                text = text().toAnnotatedString(),
                 interactionSource = interactionSource,
                 textColor = textColor,
                 onLongClick = onLongClick,
@@ -232,7 +234,7 @@ fun BubbleText(
 
 @Composable
 private fun TText(
-    text: String,
+    text: AnnotatedString,
     interactionSource: MutableInteractionSource,
     textColor: Color,
     onLongClick: () -> Unit,
@@ -243,7 +245,7 @@ private fun TText(
     }
     val onClickText = { offset: Int -> /*TODO: 点击文字特殊tag做出响应*/ }
     Text(
-        text = text.toAnnotatedString(),
+        text = text,
         modifier = Modifier
             .padding(16.dp)
             .pointerInput(Unit) {

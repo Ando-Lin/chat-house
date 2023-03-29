@@ -29,7 +29,7 @@ private const val TAG = "ProfileViewModel"
 class ProfileViewModel @Inject constructor(
     private val userRepo: UserRepo,
     @ApplicationContext private val context: Context,
-    private val savedStateHandle: SavedStateHandle
+    private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
     //uid=0时将会插入新记录
     val uid: Int = savedStateHandle[ProfileScreenDestination.argName] ?: 0

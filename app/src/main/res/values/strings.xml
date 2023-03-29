@@ -60,4 +60,5 @@
     <string name="openai_api_key">OpenAI API-Key</string>
     <string name="clear">清除</string>
     <string name="receive_interrupted">接收中断</string>
+    <string name="create_copy">创建副本</string>
 </resources>

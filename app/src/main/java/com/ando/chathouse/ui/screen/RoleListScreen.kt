@@ -10,10 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -147,6 +144,16 @@ fun RoleListScreen(
         if (uid == viewModel.screenUiState.myId) return@TDialog
 
         ClickableIconTextListItem(
+            text = stringResource(id = R.string.create_copy),
+            icon = Icons.Default.ContentCopy,
+            onClick = {
+                popupVisible = false
+                viewModel.createCopy(uid)
+            },
+            modifier = modifier
+        )
+
+        ClickableIconTextListItem(
             text = stringResource(id = R.string.delete),
             icon = Icons.Default.Delete,
             onClick = {
@@ -156,6 +163,7 @@ fun RoleListScreen(
             contentColor = MaterialTheme.colorScheme.error,
             modifier = modifier
         )
+
     }
 
 }

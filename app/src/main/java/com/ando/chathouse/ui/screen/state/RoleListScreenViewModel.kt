@@ -16,6 +16,7 @@ import com.ando.chathouse.domain.entity.toUser
 import com.ando.chathouse.domain.pojo.User
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -53,6 +54,20 @@ class RoleListScreenViewModel @Inject constructor(
 
     fun resetMessage(){
         updateMessage("")
+    }
+
+    fun createCopy(uid:Int){
+        viewModelScope.launch {
+            val role = userRepo.fetchById(uid).first()
+            if (role==null){
+                updateMessage("角色不存在：uid=$uid")
+                return@launch
+            }
+            val copy = role.copy(id = 0)
+            userRepo.save(copy)
+                .onFailure { updateMessage("角色复制失败：$it") }
+                .onSuccess { updateMessage("角色复制成功") }
+        }
     }
 
 }

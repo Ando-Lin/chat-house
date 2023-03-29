@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -51,14 +52,7 @@ fun ScreenFrameworkUI(
         navigateAction = { navigationRequest(it) },
         drawerState = drawerState,
         drawerContent = {
-            Text(
-                text = stringResource(R.string.app_name),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .padding(vertical = 14.dp)
-                    .padding(NavigationDrawerItemDefaults.ItemPadding)
-            )
+            Header()
             NavigationList(
                 visualTabDestinationList = visualTabDestinationList,
                 currentPage = currentPage,
@@ -71,10 +65,24 @@ fun ScreenFrameworkUI(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun Header() {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = stringResource(R.string.app_name),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .padding(vertical = 14.dp)
+                .padding(NavigationDrawerItemDefaults.ItemPadding)
+        )
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NavigationList(
+private fun NavigationList(
     modifier: Modifier = Modifier,
     visualTabDestinationList: ()->List<VisualTabDestination>,
     currentPage: ()->Int,

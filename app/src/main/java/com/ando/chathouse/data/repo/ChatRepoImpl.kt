@@ -78,7 +78,7 @@ class ChatRepoImpl @Inject constructor(
             ),
             RoleMessage(
                 role = RoleMessage.SYSTEM_ROLE,
-                content = "你正在扮演角色，接下来是这个角色的描述，请以该角色的口吻进行回答并描述神情和体态在括号内,你必须时刻记住角色描述并扮演好"
+                content = "你正在扮演角色，接下来是这个角色的描述，请以第一人称回答并描述神情和体态在括号内,根据角色的年龄和描述调整语言风格："
             ),
             RoleMessage(
                 role = RoleMessage.SYSTEM_ROLE,

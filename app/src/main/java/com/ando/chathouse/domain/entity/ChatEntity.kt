@@ -27,6 +27,7 @@ data class ChatEntity(
 //    val title:String
 ) {
     companion object {
+        //uid和chatId一一对应
         fun individual(uid: Int): ChatEntity =
             ChatEntity(id = uid, messageStrategy = PreferMeCarryMessageStrategy.NAME, uid = uid)
     }
