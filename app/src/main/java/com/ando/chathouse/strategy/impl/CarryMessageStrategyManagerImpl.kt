@@ -24,8 +24,13 @@ class CarryMessageStrategyManagerImpl : CarryMessageStrategyManager {
         return instance::filter
     }
 
-    override fun addStrategy(name: String, carryMessageStrategyClass: Class<out CarryMessageStrategy>) {
-        map[name] = carryMessageStrategyClass
+
+    override fun addStrategy(name: String, strategyClass: Class<out CarryMessageStrategy>) {
+        map[name] = strategyClass
+    }
+
+    fun addStrategyByClassName(strategyClass:Class<out CarryMessageStrategy>){
+        map[strategyClass.simpleName] = strategyClass
     }
 
 

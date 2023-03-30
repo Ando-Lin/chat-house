@@ -10,7 +10,4 @@ class GreedyCarryMessageStrategy: CarryMessageStrategy {
         return message.status == MessageStatus.Success
     }
 
-    companion object{
-        const val NAME = "贪婪"
-    }
 }

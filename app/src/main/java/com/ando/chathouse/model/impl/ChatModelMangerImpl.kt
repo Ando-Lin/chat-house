@@ -29,7 +29,7 @@ class ChatModelMangerImpl : ChatModelManger {
         para: ChatModel.Para,
         message: String
     ): Flow<String?> {
-        val model = _models[modelName] ?: throw IllegalArgumentException("未找到{$modelName}模型")
+        val model = _models[modelName] ?: throw IllegalArgumentException("未找到模型: modelName=$modelName")
         return model.value.sendMessage(message = message, para = para)
     }
 

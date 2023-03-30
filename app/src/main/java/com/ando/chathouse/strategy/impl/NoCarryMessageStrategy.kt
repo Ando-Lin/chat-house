@@ -9,7 +9,4 @@ class NoCarryMessageStrategy: CarryMessageStrategy {
         return false
     }
 
-    companion object{
-        const val NAME = "不携带"
-    }
 }

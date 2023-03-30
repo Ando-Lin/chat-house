@@ -6,7 +6,6 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.compose.runtime.*
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.*
@@ -20,13 +19,13 @@ import com.ando.chathouse.domain.entity.ChatMessageEntity
 import com.ando.chathouse.domain.entity.MessageStatus
 import com.ando.chathouse.domain.pojo.ChatContext
 import com.ando.chathouse.domain.pojo.ChatMessage
+import com.ando.chathouse.domain.pojo.StrategyMap
 import com.ando.chathouse.domain.pojo.User
 import com.ando.chathouse.ext.toEntity
 import com.ando.chathouse.ext.toUser
-import com.ando.chathouse.model.ChatModelManger
 import com.ando.chathouse.profile
 import com.ando.chathouse.strategy.CarryMessageStrategyManager
-import com.ando.chathouse.strategy.impl.NoCarryMessageStrategy
+import com.ando.chathouse.strategy.impl.PreferMeCarryMessageStrategy
 import com.ando.chathouse.ui.component.BubbleTextUiState
 import com.ando.chathouse.ui.component.exclusive.ChatScreenBottomBarUiState
 import com.ando.chathouse.ui.component.exclusive.ChatScreenSettingsUiState
@@ -44,17 +43,16 @@ class ChatViewModel @Inject constructor(
     private val chatRepo: ChatRepo,
     private val userRepo: UserRepo,
     @ApplicationContext private val context: Context,
-    private val chatModelManger: ChatModelManger,
     private val messageStrategyManager: CarryMessageStrategyManager,
-    private val savedStateHandle: SavedStateHandle,
+    private val strategyMap:StrategyMap,
     private val external: CoroutineScope
 ) : ViewModel() {
     private val myId = MY_UID
 
     //从配置读取当前模型
     private val currentModelFlow: StateFlow<String> =
-        context.profile.data.map { it[PreferencesKey.currentModel] ?: "" }
-            .stateIn(viewModelScope, SharingStarted.Eagerly, "")
+        context.profile.data.map { it[PreferencesKey.currentModel] ?: "openAI GPT3.5" }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, "openAI GPT3.5")
 
     //从配置读取当前chatId
     private val currentChatIdFlow: StateFlow<Int?> = context.profile.data
@@ -65,7 +63,7 @@ class ChatViewModel @Inject constructor(
 
     //当前策略
     private val currentStrategyFlow: MutableStateFlow<String> =
-        MutableStateFlow(NoCarryMessageStrategy.NAME)
+        MutableStateFlow(PreferMeCarryMessageStrategy.NAME)
 
     //我的user实例
     private val myUserFlow = userRepo.fetchById(myId)
@@ -75,12 +73,11 @@ class ChatViewModel @Inject constructor(
 
     private val latestChatFlow: StateFlow<ChatEntity?> =
         currentChatIdFlow
-            .filter {
-                it != null
-            }
             .transformLatest { uid ->
-                val flow = chatRepo.fetchChatById(uid!!)
+                uid?:return@transformLatest
+                val flow = chatRepo.fetchChatById(uid)
                     .transform {
+                        //不存在则创建
                         if (it == null) {
                             val chat = ChatEntity.individual(uid)
                             chatRepo.saveChat(chat)
@@ -113,7 +110,7 @@ class ChatViewModel @Inject constructor(
     private val settingsUiState = mutableStateOf(
         ChatScreenSettingsUiState(
             modelListFlow = flowOf(_availableModels),
-            strategyListFlow = flowOf(messageStrategyManager.strategyList),
+            strategyMapFlow = flowOf(strategyMap),
             currentModelFlow = currentModelFlow,
             currentStrategyFlow = currentStrategyFlow,
             editModeState = editModeState,

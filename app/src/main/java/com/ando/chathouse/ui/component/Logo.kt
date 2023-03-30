@@ -27,14 +27,10 @@ fun Logo(modifier: Modifier = Modifier) {
             .background(brush = Brush.horizontalGradient(colors = listOf(colors2,color1)), shape = CircleShape)
         )
         Image(
-            imageVector = ImageVector.vectorResource(id = R.drawable.logo_below),
+            imageVector = ImageVector.vectorResource(id = R.drawable.ic_launcher_foreground),
             contentDescription = null,
             alpha = 0.95f,
         )
-        Image(
-            imageVector = ImageVector.vectorResource(id = R.drawable.logo_upper),
-            contentDescription = null,
-            alpha = 0.95f,
-        )
+
     }
 }

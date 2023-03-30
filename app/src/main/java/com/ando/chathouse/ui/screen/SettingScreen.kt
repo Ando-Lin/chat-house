@@ -45,8 +45,13 @@ fun SettingScreen(
     val uiState = viewModel.uiState
     val backgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
     val originalApiKey by uiState.apiKeyState()
-    val text = rememberSaveable(originalApiKey) {
-        mutableStateOf(originalApiKey ?: "")
+    val text = rememberSaveable {
+        mutableStateOf("")
+    }
+    LaunchedKeyEffect(originalApiKey){
+        if (text.value.isBlank() && !originalApiKey.isNullOrBlank()){
+            text.value = originalApiKey!!
+        }
     }
     val focusManager = LocalFocusManager.current
     val interactionSource = remember {

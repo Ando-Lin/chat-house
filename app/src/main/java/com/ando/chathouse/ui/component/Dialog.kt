@@ -127,7 +127,8 @@ fun DialogForStringInput(
     SimpleAlertDialog(
         dialogVisible = dialogVisible,
         onCancel = onCancel,
-        onConfirm = { onConfirm(text.value) }
+        onConfirm = { onConfirm(text.value) },
+        modifier = modifier
     ) {
         OutlinedTextField(
             value = text.value,
@@ -135,7 +136,6 @@ fun DialogForStringInput(
             label = if (label != null) { { Text(text = label) } } else null,
             placeholder = if (placeholder!=null){{ Text(text = placeholder)}} else null,
             maxLines = 10,
-            modifier = modifier
         )
     }
 }

@@ -69,4 +69,8 @@
         \n详情可见腾讯Bugly隐私政策：https://bugly.com/v2/。
         \n
         \n点击确定即代表您同意腾讯Bugly隐私收集</string>
+    <string name="prefer_me">偏好我</string>
+    <string name="fixed_window">固定窗口</string>
+    <string name="greedy">贪婪</string>
+    <string name="no_carry">不携带</string>
 </resources>

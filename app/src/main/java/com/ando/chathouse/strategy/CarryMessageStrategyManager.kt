@@ -7,5 +7,5 @@ interface CarryMessageStrategyManager {
     val strategyList: List<String>
     fun <T> filterBy(strategy: String, block: CarryMessageStrategy.() -> T): T
     fun filterBy(strategy: String): (ChatMessageEntity, ChatContext)->Boolean
-    fun addStrategy(name:String, carryMessageStrategyClass: Class<out CarryMessageStrategy>)
+    fun addStrategy(name:String, strategyClass: Class<out CarryMessageStrategy>)
 }

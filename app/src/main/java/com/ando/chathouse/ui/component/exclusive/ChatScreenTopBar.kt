@@ -7,10 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -18,13 +15,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.ando.chathouse.R
+import com.ando.chathouse.domain.pojo.StrategyMap
 import com.ando.chathouse.ui.component.FilledTonalSquareIconButton
 import com.ando.chathouse.ui.component.SegmentedButtonGroup
 import kotlinx.coroutines.flow.Flow
 
 data class ChatScreenSettingsUiState(
     private val modelListFlow: Flow<List<String>>,
-    private val strategyListFlow: Flow<List<String>>,
+    private val strategyMapFlow: Flow<StrategyMap>,
     private val currentModelFlow:Flow<String>,
     private val currentStrategyFlow:Flow<String>,
     private val editModeState: State<Boolean>,
@@ -37,7 +35,7 @@ data class ChatScreenSettingsUiState(
     fun modelList() = modelListFlow.collectAsState(initial = listOf()).value
 
     @Composable
-    fun strategyList() = strategyListFlow.collectAsState(initial = listOf()).value
+    fun strategyMap() = strategyMapFlow.collectAsState(initial = StrategyMap(emptyMap())).value
 
     @Composable
     fun currentModel() = currentModelFlow.collectAsState(initial = "").value
@@ -131,6 +129,7 @@ private fun ChatScreenTopBar(
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatSettings(
     modifier: Modifier = Modifier,
@@ -173,12 +172,16 @@ fun ChatSettings(
                 )
 
                 //策略选择组
-                val strategyList = uiState.strategyList()
+                val strategyMap = uiState.strategyMap()
+                val selectedItem = strategyMap.getName(uiState.currentStrategy())
                 SettingMultiShortItem(
                     label = stringResource(id = R.string.strategies),
-                    items = strategyList,
-                    selectedItem = uiState.currentStrategy(),
-                    onSelect = { onSelectStrategy(strategyList[it]) }
+                    items = strategyMap.nameList,
+                    selectedItem = selectedItem?:"",
+                    onSelect = {
+                        val name = strategyMap.nameList[it]
+                        onSelectStrategy(strategyMap.getStrategy(name)!!)
+                    }
                 )
 
                 Divider(

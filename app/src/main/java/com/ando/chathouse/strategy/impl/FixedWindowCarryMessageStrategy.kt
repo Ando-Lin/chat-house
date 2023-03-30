@@ -24,7 +24,6 @@ class FixedWindowCarryMessageStrategy() : MutableStatefulCarryMessageStrategy<In
     }
 
     companion object{
-        const val NAME = "固定10个窗口"
         private const val TAG = "FixedWindowCarryMessage"
     }
 }

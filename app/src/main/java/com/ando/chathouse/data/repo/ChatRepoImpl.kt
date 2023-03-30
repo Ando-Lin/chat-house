@@ -78,7 +78,7 @@ class ChatRepoImpl @Inject constructor(
         return listOf(
             RoleMessage(
                 role = RoleMessage.SYSTEM_ROLE,
-                content = "${formattedUserName}请你根据上下文接下去扮演角色(若缺少信息则假设后进行对话)."
+                content = "${formattedUserName}请你根据你之前的回答扮演角色(若缺少信息则推理后进行对话)."
             ),
             RoleMessage(
                 role = RoleMessage.SYSTEM_ROLE,

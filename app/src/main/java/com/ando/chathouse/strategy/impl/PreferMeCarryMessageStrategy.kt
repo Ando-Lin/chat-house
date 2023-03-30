@@ -33,7 +33,7 @@ class PreferMeCarryMessageStrategy: MutableStatefulCarryMessageStrategy<Int> {
     }
 
     companion object {
+        val NAME:String = PreferMeCarryMessageStrategy::class.simpleName!!
         private const val TAG = "PreferMeCarryMessageStr"
-        const val NAME = "偏好我"
     }
 }

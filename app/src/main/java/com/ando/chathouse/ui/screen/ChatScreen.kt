@@ -24,7 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.paging.compose.LazyPagingItems
-import androidx.paging.compose.itemsIndexed
+import androidx.paging.compose.items
 import com.ando.chathouse.ProfileScreenDestination
 import com.ando.chathouse.R
 import com.ando.chathouse.domain.entity.MessageStatus
@@ -160,8 +160,7 @@ fun ChatScreen(
             },
             initText = longPressedMessageUiState!!.text,
             modifier = Modifier
-                .requiredWidth(340.dp)
-                .requiredHeight(240.dp)
+                .wrapContentSize()
         )
     }
 
@@ -248,8 +247,6 @@ fun ChatArea(
             lazyColumnState.animateScrollToItem(0)
         }
     }
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     //上下反转的惰性列表
     LazyColumn(
         state = lazyColumnState,
@@ -259,22 +256,34 @@ fun ChatArea(
         modifier = modifier
     ) {
         val itemModifier = Modifier.fillMaxWidth()
-        itemsIndexed(
+        items(
             items = pagingItems,
-            key = { _, value: ChatMessageUiState -> value.id }
-        ) { index, item ->
+            key = { it.id }
+        ) { item ->
             if (item != null) {
+                val rememberItem = remember {
+                    mutableStateOf(item)
+                }
+                LaunchedKeyEffect(item){
+                    rememberItem.value = item
+                }
+                val onLongClickLocal = {
+                    onLongClick(rememberItem.value)
+                }
                 SimpleMessage(
                     messageUiState = item,
                     isMe = item.uid == myId,
                     showTime = item.secondDiff >= DISPLAY_TIME_THRESHOLD_SECOND,
                     modifier = itemModifier,
-                    onLongClick = { onLongClick(pagingItems.peek(index)!!) },
+                    onLongClick = onLongClickLocal,
                     onClickAvatar = { onClickAvatar(item.uid) },
                     onClickBubble = { onClickBubble(item.id) }
                 )
             } else {
                 //占位符
+                Box(modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp))
             }
         }
     }
