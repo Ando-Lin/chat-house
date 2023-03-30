@@ -1,5 +1,6 @@
 package com.ando.chathouse.constant
 
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 
@@ -8,5 +9,6 @@ object PreferencesKey {
     val nightMode = stringPreferencesKey("night_mode")
     val currentModel = stringPreferencesKey("current_model")
     val currentChatId = intPreferencesKey("current_chat_id")
+    val enableBugly = booleanPreferencesKey("enable_bugly")
 }
 

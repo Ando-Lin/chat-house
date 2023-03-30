@@ -33,7 +33,7 @@ fun ScreenFrameworkUI(
     drawerState: DrawerState,
     visualTabDestinationList: ()->List<VisualTabDestination>,
     enableDrawer: Boolean,
-    currentPage: ()->Int,
+    currentRoute: ()->String,
     navigationRequest: (String) -> Unit,
     scrollToPageRequest: (Int) -> Unit,
     content: @Composable () -> Unit
@@ -55,7 +55,7 @@ fun ScreenFrameworkUI(
             Header()
             NavigationList(
                 visualTabDestinationList = visualTabDestinationList,
-                currentPage = currentPage,
+                currentRoute = currentRoute,
                 scrollToPageRequest = {
                     scrollToPageRequest(it)
                 },
@@ -85,11 +85,11 @@ private fun Header() {
 private fun NavigationList(
     modifier: Modifier = Modifier,
     visualTabDestinationList: ()->List<VisualTabDestination>,
-    currentPage: ()->Int,
+    currentRoute: ()->String,
     scrollToPageRequest: (Int) -> Unit
 ) {
     visualTabDestinationList().forEachIndexed { index, item ->
-        val selected = currentPage() == index
+        val selected = currentRoute() == item.realRoute
         NavigationDrawerItem(
             label = {
                 Text(

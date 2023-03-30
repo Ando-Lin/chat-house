@@ -61,4 +61,12 @@
     <string name="clear">清除</string>
     <string name="receive_interrupted">接收中断</string>
     <string name="create_copy">创建副本</string>
+    <string name="help_collecting_error">帮助收集错误</string>
+    <string name="privacy_collection_statement">隐私收集声明</string>
+    <string name="privacy_collection_statement_content_">
+        腾讯Bugly为移动开发者提供了专业的异常上报和运营统计，目的是：帮助开发者快速发现并解决异常，同时掌握产品运营动态，及时跟进用户反馈。
+        错误报告收集由腾讯Bugly提供，错误报告主要收集软件运行时发生的错误信息，收集时可能包含部分隐私信息，报告将通过联网上传至腾讯服务器保存。
+        \n详情可见腾讯Bugly隐私政策：https://bugly.com/v2/。
+        \n
+        \n点击确定即代表您同意腾讯Bugly隐私收集</string>
 </resources>

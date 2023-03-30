@@ -24,7 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.paging.compose.LazyPagingItems
-import androidx.paging.compose.items
+import androidx.paging.compose.itemsIndexed
 import com.ando.chathouse.ProfileScreenDestination
 import com.ando.chathouse.R
 import com.ando.chathouse.domain.entity.MessageStatus
@@ -46,7 +46,7 @@ fun ChatScreen(
     var dialogForOpVisible by remember { mutableStateOf(false) }
     var dialogForInputVisible by rememberSaveable { mutableStateOf(false) }
     var dialogForWarning by remember { mutableStateOf(false) }
-    var longPressedMessageUiState by remember { mutableStateOf<ChatMessageUiState?>(null) }
+    var longPressedMessageUiState: ChatMessageUiState? by remember { mutableStateOf(null) }
     val hapticFeedback = LocalHapticFeedback.current
     val screenUiState = viewModel.screenUiState
     val scope = rememberCoroutineScope()
@@ -159,7 +159,9 @@ fun ChatScreen(
                 dialogForInputVisible = false
             },
             initText = longPressedMessageUiState!!.text,
-            modifier = Modifier.requiredWidth(260.dp)
+            modifier = Modifier
+                .requiredWidth(340.dp)
+                .requiredHeight(240.dp)
         )
     }
 
@@ -246,6 +248,8 @@ fun ChatArea(
             lazyColumnState.animateScrollToItem(0)
         }
     }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     //上下反转的惰性列表
     LazyColumn(
         state = lazyColumnState,
@@ -255,15 +259,17 @@ fun ChatArea(
         modifier = modifier
     ) {
         val itemModifier = Modifier.fillMaxWidth()
-        items(items = pagingItems, key = { value: ChatMessageUiState -> value.id }) { item ->
+        itemsIndexed(
+            items = pagingItems,
+            key = { _, value: ChatMessageUiState -> value.id }
+        ) { index, item ->
             if (item != null) {
-
                 SimpleMessage(
                     messageUiState = item,
                     isMe = item.uid == myId,
                     showTime = item.secondDiff >= DISPLAY_TIME_THRESHOLD_SECOND,
                     modifier = itemModifier,
-                    onLongClick = { onLongClick(item) },
+                    onLongClick = { onLongClick(pagingItems.peek(index)!!) },
                     onClickAvatar = { onClickAvatar(item.uid) },
                     onClickBubble = { onClickBubble(item.id) }
                 )

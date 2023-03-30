@@ -19,6 +19,7 @@ import com.ando.chathouse.ui.theme.ChatHouseTheme
 
 @Composable
 fun SimpleAlertDialog(
+    modifier: Modifier = Modifier,
     dialogVisible: Boolean,
     onCancel: () -> Unit,
     onConfirm: () -> Unit,
@@ -37,6 +38,7 @@ fun SimpleAlertDialog(
                     Text(text = stringResource(id = R.string.confirm))
                 }
             },
+            modifier = modifier,
             dismissButton = {
                 TextButton(onClick = onCancel, modifier = Modifier.wrapContentSize()) {
                     Text(text = stringResource(id = R.string.cancel))

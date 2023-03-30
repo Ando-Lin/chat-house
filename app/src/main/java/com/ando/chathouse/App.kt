@@ -4,9 +4,13 @@ import android.app.Application
 import android.content.Context
 import android.text.TextUtils
 import androidx.datastore.preferences.preferencesDataStore
+import com.ando.chathouse.constant.PreferencesKey
 import com.tencent.bugly.crashreport.CrashReport
 import com.tencent.bugly.crashreport.CrashReport.UserStrategy
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.runBlocking
 import okio.IOException
 import java.io.BufferedReader
 import java.io.FileReader
@@ -16,12 +20,20 @@ import java.io.FileReader
 class App : Application() {
     override fun onCreate() {
         super.onCreate()
-        //设置策略
-        val processName = getProcessName(android.os.Process.myPid())
-        val strategy = UserStrategy(applicationContext)
-        strategy.isUploadProcess = processName==null|| processName == packageName
-        //初始化崩溃报告
-        CrashReport.initCrashReport(this.applicationContext, strategy)
+
+        val enableBugly = runBlocking {
+             applicationContext.profile.data.map { it[PreferencesKey.enableBugly] }
+                .first()?:false
+        }
+
+        if (enableBugly){
+            //设置策略
+            val processName = getProcessName(android.os.Process.myPid())
+            val strategy = UserStrategy(applicationContext)
+            strategy.isUploadProcess = processName==null|| processName == packageName
+            //初始化崩溃报告
+            CrashReport.initCrashReport(this.applicationContext, strategy)
+        }
     }
 
     /**

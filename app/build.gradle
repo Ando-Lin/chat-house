@@ -27,7 +27,7 @@ android {
         }
         ndk {
             // 设置支持的SO库架构
-            abiFilters 'armeabi' //, 'x86', 'armeabi-v7a', 'x86_64', 'arm64-v8a'
+            abiFilters 'arm64-v8a' //, 'x86', 'armeabi-v7a', 'x86_64', 'arm64-v8a'
         }
     }
     testOptions {
@@ -71,7 +71,7 @@ dependencies {
     implementation "androidx.compose.ui:ui:$compose_version"
     implementation "androidx.compose.ui:ui-tooling-preview:$compose_version"
     implementation "androidx.compose.material3:material3:$material3"
-    implementation "androidx.compose.foundation:foundation:1.5.0-alpha01"
+    implementation "androidx.compose.foundation:foundation:1.4.0-beta02"
     implementation "androidx.compose.material:material-icons-extended:$compose_version"
     implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1'
     testImplementation 'junit:junit:4.13.2'
@@ -83,7 +83,7 @@ dependencies {
     debugImplementation "androidx.compose.ui:ui-test-manifest:$compose_version"
 
     def nav_version = "2.5.3"
-    implementation "androidx.navigation:navigation-compose:$nav_version"
+//    implementation "androidx.navigation:navigation-compose:$nav_version"
 
     //模糊处理工具
     implementation "com.github.skydoves:cloudy:0.1.2"
@@ -91,6 +91,7 @@ dependencies {
     //accompanist组件
     def accompanist_version  = "0.30.0"
     implementation "com.google.accompanist:accompanist-swiperefresh:$accompanist_version"
+    implementation "com.google.accompanist:accompanist-navigation-animation:$accompanist_version"
 //    implementation "com.google.accompanist:accompanist-placeholder-material:$accompanist_version"
 //    implementation "com.google.accompanist:accompanist-flowlayout:$accompanist_version"
 

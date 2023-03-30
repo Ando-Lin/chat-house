@@ -1,38 +1,40 @@
-@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@file:OptIn(
+    ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class,
+    ExperimentalAnimationApi::class, ExperimentalAnimationApi::class
+)
 
 package com.ando.chathouse
 
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContentScope
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.pager.PagerState
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.datastore.preferences.core.edit
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import com.ando.chathouse.constant.PreferencesKey
 import com.ando.chathouse.ext.navigateSingleTop
-import com.ando.chathouse.ui.component.LaunchedKeyEffect
 import com.ando.chathouse.ui.component.SnackbarUI
-import com.ando.chathouse.ui.screen.MainScreen
-import com.ando.chathouse.ui.screen.ProfileScreen
-import com.ando.chathouse.ui.screen.SettingScreen
+import com.ando.chathouse.ui.screen.*
 import com.ando.chathouse.ui.theme.ChatHouseTheme
+import com.google.accompanist.navigation.animation.AnimatedNavHost
+import com.google.accompanist.navigation.animation.composable
+import com.google.accompanist.navigation.animation.rememberAnimatedNavController
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -41,8 +43,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         //设置compose
         setContent {
-            val navController = rememberNavController()
-            val pagerState = rememberPagerState(MainScreen.defaultPage)
+            val navController = rememberAnimatedNavController()
+            val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
             Init()
             ChatHouseTheme {
                 Scaffold(
@@ -55,7 +57,7 @@ class MainActivity : ComponentActivity() {
                     ) {
                         Navigation(
                             navController = navController,
-                            pagerState = pagerState
+                            drawerState = drawerState
                         )
                     }
                 }
@@ -66,48 +68,86 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun Navigation(
     navController: NavHostController,
-    pagerState: PagerState
+    drawerState: DrawerState
 ) {
-    NavHost(
+    val animateTime = 400
+    AnimatedNavHost(
         navController = navController,
-        startDestination = MainScreenDestination.routeWithArg,
+        startDestination = ChatScreenTabDestination.routeWithArg,
     ) {
         composable(
-            route = MainScreenDestination.routeWithArg,
-            arguments = MainScreenDestination.arguments
+            route = ChatScreenTabDestination.routeWithArg,
+            arguments = ChatScreenTabDestination.arguments,
+            enterTransition = {
+                Log.i(TAG, "Navigation: enter route = ${initialState.destination.route}")
+                when(initialState.destination.route){
+                    RoleListScreenTabDestination.realRoute ->
+                        slideIntoContainer(AnimatedContentScope.SlideDirection.Down,tween(animateTime))
+                    else -> null
+                }
+
+            },
+            exitTransition = {
+                when(targetState.destination.route){
+                    RoleListScreenTabDestination.realRoute ->
+                        slideOutOfContainer(AnimatedContentScope.SlideDirection.Up,tween(animateTime))
+                    else -> null
+                }
+            },
         ) { navBackStackEntry ->
             val arguments = navBackStackEntry.arguments
-            val tab = arguments?.getString(MainScreenDestination.tabRoute)
-                ?: ChatScreenTabDestination.route
             //更新参数
-            val params = arguments?.getString(MainScreenDestination.tabParas)
+            val params = arguments?.getString(ChatScreenTabDestination.argName)
             val context = LocalContext.current
-            LaunchedKeyEffect(params) {
+            //将dataStore的currentChatId作为屏幕显示唯一可信源
+            LaunchedEffect(params) {
                 val chatId = params?.toIntOrNull()
                 if (chatId != null) {
-                    context.profile.updateData {
-                        val mutablePreferences = it.toMutablePreferences()
-                        mutablePreferences[PreferencesKey.currentChatId] = chatId
-                        mutablePreferences
+                    context.profile.edit {
+                        it[PreferencesKey.currentChatId] = chatId
                     }
                 }
             }
-            MainScreen.ScreenUI(
-                key = arguments,
-                requestTab = tab,
-                pagerState = pagerState,
-                navigationRequest = { navController.navigateSingleTop(it) }
+            MainScreen.MChatScreen(
+                navigationRequest = navController::navigateSingleTop,
+                drawerState = drawerState
             )
         }
-        composable(route = SettingScreenDestination.route) {
+        composable(
+            route = RoleListScreenTabDestination.route,
+            enterTransition = {
+                when (initialState.destination.route) {
+                    ChatScreenTabDestination.realRoute ->
+                        slideIntoContainer(AnimatedContentScope.SlideDirection.Up, tween(animateTime))
+                    else -> null
+                }
+            },
+            exitTransition = {
+                when (targetState.destination.route) {
+                    ChatScreenTabDestination.realRoute ->
+                        slideOutOfContainer(AnimatedContentScope.SlideDirection.Down, tween(animateTime)
+                    )
+                    else -> null
+                }
+
+            },
+        ) {
+            MainScreen.MRoleListScreen(
+                navigationRequest = navController::navigateSingleTop,
+                drawerState = drawerState
+            )
+        }
+        composable(route = SettingScreenDestination.route, enterTransition = null) {
             SettingScreen(backAction = { navController.popBackStack() })
         }
         composable(
             route = ProfileScreenDestination.routeWithArg,
-            arguments = ProfileScreenDestination.arguments
+            arguments = ProfileScreenDestination.arguments,
+            enterTransition = null
         ) {
             ProfileScreen(backAction = { navController.popBackStack() })
         }

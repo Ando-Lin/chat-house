@@ -6,13 +6,11 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.compose.runtime.*
-import androidx.core.text.isDigitsOnly
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.*
 import androidx.paging.compose.collectAsLazyPagingItems
-import com.ando.chathouse.MainScreenDestination
 import com.ando.chathouse.constant.MY_UID
 import com.ando.chathouse.constant.PreferencesKey
 import com.ando.chathouse.data.repo.ChatRepo
@@ -59,9 +57,11 @@ class ChatViewModel @Inject constructor(
             .stateIn(viewModelScope, SharingStarted.Eagerly, "")
 
     //从配置读取当前chatId
-    private val currentChatIdFlow: StateFlow<Int?> =
-        context.profile.data.map { it[PreferencesKey.currentChatId] }
-            .stateIn(viewModelScope, SharingStarted.Lazily, null)
+    private val currentChatIdFlow: StateFlow<Int?> = context.profile.data
+        .onEach { Log.i(TAG, "stateflow.value=$it ") }
+        .map { it[PreferencesKey.currentChatId] }
+        .stateIn(viewModelScope, SharingStarted.Lazily, null)
+
 
     //当前策略
     private val currentStrategyFlow: MutableStateFlow<String> =
@@ -73,27 +73,8 @@ class ChatViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Eagerly, User.emptyUser)
 
 
-    //从savedStateHandle和配置中读取当前chatId. 以savedStateHandle的值为主
-    private val latestChatIdFlow: StateFlow<Int?> = savedStateHandle
-        .getStateFlow(MainScreenDestination.tabParas, null as String?)
-        .onEach { Log.i(TAG, "stateflow.value=$it ") }
-        .combine(currentChatIdFlow) { v1, v2 ->
-            Log.i(TAG, "flow bine: v1=$v1, v2=$v2")
-            when {
-                v1?.isDigitsOnly() ?: false -> {
-                    val id = v1!!.toIntOrNull()
-                    if (id != v2) {
-                        updateCurrentChatId(id)
-                    }
-                    id
-                }
-                else -> v2
-            }
-        }
-        .stateIn(viewModelScope, SharingStarted.Lazily, null)
-
     private val latestChatFlow: StateFlow<ChatEntity?> =
-        latestChatIdFlow
+        currentChatIdFlow
             .filter {
                 it != null
             }
