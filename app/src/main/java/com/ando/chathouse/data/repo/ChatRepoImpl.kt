@@ -124,8 +124,8 @@ class ChatRepoImpl @Inject constructor(
     ): MutableList<RoleMessage> {
         val pageSize = 20
         val list = mutableListOf<RoleMessage>()
-        //600是指令token的估计值，0.87是中文字符/token的大致比率
-        val maxToken: Int = (4096 * 0.8).toInt() - 600
+        //600是指令token的估计值，0.8是中文字符/token的大致比率,需要留出一定token让gpt回答
+        val maxChars: Int = (4096 * 0.65).toInt() - 600
         //字符计数
         var count = 0
         //用于过滤的上下文
@@ -149,7 +149,7 @@ class ChatRepoImpl @Inject constructor(
                 RoleMessage(role = RoleMessage.USER_ROLE, content = it.text)
             }
             .onEach { value -> count += value.content.length }
-            .takeWhile { count < maxToken }
+            .takeWhile { count < maxChars }
             .onEach { list.add(0, it) }
             .onCompletion {
                 Log.i(TAG, "getHistory: flow onCompletion")

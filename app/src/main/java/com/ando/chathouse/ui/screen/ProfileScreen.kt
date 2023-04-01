@@ -171,7 +171,7 @@ private fun CommonSettings(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        val itemModifier = Modifier.padding(horizontal = 20.dp)
+        val itemModifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 10.dp)
         HeadAndAvatar(
             modifier = Modifier
                 .fillMaxWidth()
@@ -181,7 +181,6 @@ private fun CommonSettings(
             },
             avatar = tempUser.avatar
         )
-        Spacer(modifier = Modifier.height(10.dp))
         TextAndInput(
             title = stringResource(id = R.string.name),
             description = stringResource(id = R.string.name_description),
@@ -189,14 +188,13 @@ private fun CommonSettings(
             onTextChange = { updateTempUser(tempUser.copy(name = it)) },
             modifier = itemModifier
         )
-
         TextAndInput(
             title = stringResource(id = R.string.role_description),
             description = stringResource(id = R.string.assign_model_play_role),
             content = tempUser.description,
             onTextChange = { updateTempUser(tempUser.copy(description = it)) },
-            maxLines = 10,
-            modifier = itemModifier
+            maxLines = Int.MAX_VALUE,
+            modifier = itemModifier.padding(bottom = 10.dp)
         )
     }
 }

@@ -34,8 +34,8 @@ fun ScreenFrameworkUI(
     visualTabDestinationList: ()->List<VisualTabDestination>,
     enableDrawer: Boolean,
     currentRoute: ()->String,
-    navigationRequest: (String) -> Unit,
-    scrollToPageRequest: (Int) -> Unit,
+    navigateToSettingsRequest: () -> Unit,
+    navigateToTabRequest: (Int) -> Unit,
     content: @Composable () -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -49,7 +49,7 @@ fun ScreenFrameworkUI(
     TDrawer(
         modifier = Modifier,
         enable = enableDrawer,
-        navigateAction = { navigationRequest(it) },
+        navigateToSettingsAction = { navigateToSettingsRequest() },
         drawerState = drawerState,
         drawerContent = {
             Header()
@@ -57,7 +57,7 @@ fun ScreenFrameworkUI(
                 visualTabDestinationList = visualTabDestinationList,
                 currentRoute = currentRoute,
                 scrollToPageRequest = {
-                    scrollToPageRequest(it)
+                    navigateToTabRequest(it)
                 },
             )
         },

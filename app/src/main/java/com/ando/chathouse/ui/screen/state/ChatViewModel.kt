@@ -25,7 +25,7 @@ import com.ando.chathouse.ext.toEntity
 import com.ando.chathouse.ext.toUser
 import com.ando.chathouse.profile
 import com.ando.chathouse.strategy.CarryMessageStrategyManager
-import com.ando.chathouse.strategy.impl.PreferMeCarryMessageStrategy
+import com.ando.chathouse.strategy.impl.FixedWindowCarryMessageStrategy
 import com.ando.chathouse.ui.component.BubbleTextUiState
 import com.ando.chathouse.ui.component.exclusive.ChatScreenBottomBarUiState
 import com.ando.chathouse.ui.component.exclusive.ChatScreenSettingsUiState
@@ -63,7 +63,7 @@ class ChatViewModel @Inject constructor(
 
     //当前策略
     private val currentStrategyFlow: MutableStateFlow<String> =
-        MutableStateFlow(PreferMeCarryMessageStrategy.NAME)
+        MutableStateFlow(FixedWindowCarryMessageStrategy.NAME)
 
     //我的user实例
     private val myUserFlow = userRepo.fetchById(myId)

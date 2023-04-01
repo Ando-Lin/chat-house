@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -23,11 +24,11 @@ import kotlinx.coroutines.flow.Flow
 data class ChatScreenSettingsUiState(
     private val modelListFlow: Flow<List<String>>,
     private val strategyMapFlow: Flow<StrategyMap>,
-    private val currentModelFlow:Flow<String>,
-    private val currentStrategyFlow:Flow<String>,
+    private val currentModelFlow: Flow<String>,
+    private val currentStrategyFlow: Flow<String>,
     private val editModeState: State<Boolean>,
     private val multiSelectModeState: State<Boolean>
-){
+) {
     val editMode: Boolean by editModeState
     val multiSelectMode: Boolean by multiSelectModeState
 
@@ -47,7 +48,7 @@ data class ChatScreenSettingsUiState(
 data class ChatScreenTopBarUiState(
     private val titleFlow: Flow<String>,
     private val settingsUiStateState: State<ChatScreenSettingsUiState>
-){
+) {
     val settingsUiState by settingsUiStateState
 
     @Composable
@@ -69,7 +70,7 @@ fun ChatScreenExtendedTopBar(
     val settingsUiState = uiState.settingsUiState
     Column(modifier) {
         ChatScreenTopBar(
-            title =title,
+            title = title,
             editMode = settingsUiState.editMode,
             onClickMenu = onClickMenu,
             onClickActionIcon = onClickActionIcon
@@ -85,6 +86,7 @@ fun ChatScreenExtendedTopBar(
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChatScreenTopBar(
     modifier: Modifier = Modifier,
@@ -109,19 +111,15 @@ private fun ChatScreenTopBar(
             }
         },
         actions = {
-            var contentDescriptionResId = R.string.edit_mode
-            var icon = Icons.Default.Edit
-            if (editMode) {
-                icon = Icons.Default.Chat
-                contentDescriptionResId = R.string.chat_mode
-            }
-            IconButton(
-                onClick = onClickActionIcon,
+            FilledIconToggleButton(
+                checked = editMode,
+                onCheckedChange = { onClickActionIcon() },
                 modifier = Modifier.scale(0.8f),
+                colors = IconButtonDefaults.filledIconToggleButtonColors(containerColor = Color.Transparent)
             ) {
                 Icon(
-                    imageVector = icon,
-                    contentDescription = stringResource(id = contentDescriptionResId),
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = stringResource(id = R.string.edit_mode),
                 )
             }
         }
@@ -177,7 +175,7 @@ fun ChatSettings(
                 SettingMultiShortItem(
                     label = stringResource(id = R.string.strategies),
                     items = strategyMap.nameList,
-                    selectedItem = selectedItem?:"",
+                    selectedItem = selectedItem ?: "",
                     onSelect = {
                         val name = strategyMap.nameList[it]
                         onSelectStrategy(strategyMap.getStrategy(name)!!)
@@ -224,8 +222,8 @@ fun SettingMultiShortItem(
     label: String,
     items: List<String>,
     selectedItem: String,
-    headContent: @Composable (RowScope.()->Unit)?=null,
-    tailContent: @Composable (RowScope.()->Unit)? = null,
+    headContent: @Composable (RowScope.() -> Unit)? = null,
+    tailContent: @Composable (RowScope.() -> Unit)? = null,
     onSelect: (index: Int) -> Unit
 ) {
     MultiShortItem(modifier = modifier, label = label) {

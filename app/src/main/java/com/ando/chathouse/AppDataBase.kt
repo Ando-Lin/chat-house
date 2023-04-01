@@ -14,7 +14,7 @@ import com.ando.chathouse.data.source.local.dao.UserDao
 import com.ando.chathouse.domain.entity.ChatEntity
 import com.ando.chathouse.domain.entity.ChatMessageEntity
 import com.ando.chathouse.domain.entity.UserEntity
-import com.ando.chathouse.strategy.impl.PreferMeCarryMessageStrategy
+import com.ando.chathouse.strategy.impl.FixedWindowCarryMessageStrategy
 import com.ando.chathouse.util.Converters
 
 @Database(
@@ -42,7 +42,7 @@ abstract class AppDataBase:RoomDatabase() {
                 val chatEntity = ContentValues()
                 chatEntity.put("id", uid)
                 chatEntity.put("uid", uid)
-                chatEntity.put("msg_strategy", PreferMeCarryMessageStrategy.NAME)
+                chatEntity.put("msg_strategy", FixedWindowCarryMessageStrategy.NAME)
                 db.insert("chat", SQLiteDatabase.CONFLICT_IGNORE, chatEntity)
             }
         }

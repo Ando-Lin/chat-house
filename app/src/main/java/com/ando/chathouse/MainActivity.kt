@@ -28,7 +28,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.datastore.preferences.core.edit
 import androidx.navigation.NavHostController
 import com.ando.chathouse.constant.PreferencesKey
-import com.ando.chathouse.ext.navigateSingleTop
 import com.ando.chathouse.ui.component.SnackbarUI
 import com.ando.chathouse.ui.screen.*
 import com.ando.chathouse.ui.theme.ChatHouseTheme
@@ -113,7 +112,7 @@ fun Navigation(
                 }
             }
             MainScreen.MChatScreen(
-                navigationRequest = navController::navigateSingleTop,
+                navController = navController,
                 drawerState = drawerState
             )
         }
@@ -137,7 +136,7 @@ fun Navigation(
             },
         ) {
             MainScreen.MRoleListScreen(
-                navigationRequest = navController::navigateSingleTop,
+                navController = navController,
                 drawerState = drawerState
             )
         }

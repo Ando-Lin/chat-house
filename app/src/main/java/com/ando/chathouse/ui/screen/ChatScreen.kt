@@ -61,7 +61,6 @@ fun ChatScreen(
         viewModel.resetMessage()
     }
 
-
     Scaffold(
         modifier = Modifier.pointerInput(Unit) {
             detectTapGestures {
@@ -171,6 +170,8 @@ fun ChatScreen(
             onConfirm = {
                 dialogForWarning = false
                 viewModel.clearConversation()
+                //关闭编辑模式
+                viewModel.switchEditModeState(false)
             },
             title = { Text(text = stringResource(id = R.string.confirm_delete)) }
         ) {
@@ -393,5 +394,5 @@ fun SimpleMessage(
 
 private const val TAG = "ChatScreen"
 
-//相邻的两条消息时间差超过10分钟则显示时间
-private const val DISPLAY_TIME_THRESHOLD_SECOND = 10 * 60
+//相邻的两条消息时间差超过5分钟则显示时间
+private const val DISPLAY_TIME_THRESHOLD_SECOND = 5 * 60

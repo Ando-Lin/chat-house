@@ -2,7 +2,6 @@ package com.ando.chathouse.ext
 
 import android.content.Context
 import android.text.format.DateUtils
-import android.util.Log
 import android.widget.Toast
 import androidx.collection.LruCache
 import androidx.compose.foundation.gestures.PressGestureScope
@@ -56,12 +55,24 @@ fun LocalDateTime.formatByNow(context: Context): String {
 }
 
 fun NavHostController.navigateSingleTop(route: String) {
-    Log.i(TAG, "navigateSingleTop: route=$route")
     navigate(route = route) {
         launchSingleTop = true
         restoreState = true
     }
 }
+
+fun NavHostController.navigatePopup(route: String) {
+    val currentRoute = this.currentDestination?.route
+    navigate(route = route) {
+        launchSingleTop = true
+        if (currentRoute!=null){
+            popUpTo(route = currentRoute){
+                inclusive = true
+            }
+        }
+    }
+}
+
 
 suspend fun PressGestureScope.withMutableInteractionSource(
     offset: Offset,

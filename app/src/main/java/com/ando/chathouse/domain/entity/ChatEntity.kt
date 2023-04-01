@@ -4,7 +4,7 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
-import com.ando.chathouse.strategy.impl.PreferMeCarryMessageStrategy
+import com.ando.chathouse.strategy.impl.FixedWindowCarryMessageStrategy
 
 @Entity(
     tableName = "chat",
@@ -29,6 +29,6 @@ data class ChatEntity(
     companion object {
         //uid和chatId一一对应
         fun individual(uid: Int): ChatEntity =
-            ChatEntity(id = uid, messageStrategy = PreferMeCarryMessageStrategy.NAME, uid = uid)
+            ChatEntity(id = uid, messageStrategy = FixedWindowCarryMessageStrategy.NAME, uid = uid)
     }
 }

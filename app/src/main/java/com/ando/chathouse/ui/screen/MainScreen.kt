@@ -9,8 +9,12 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
+import androidx.navigation.NavHostController
 import com.ando.chathouse.ChatScreenTabDestination
 import com.ando.chathouse.RoleListScreenTabDestination
+import com.ando.chathouse.SettingScreenDestination
+import com.ando.chathouse.ext.navigatePopup
+import com.ando.chathouse.ext.navigateSingleTop
 import kotlinx.coroutines.launch
 import okhttp3.internal.toImmutableList
 
@@ -26,7 +30,8 @@ object MainScreen {
     @Composable
     fun ScreenDrawer(
         drawerState: DrawerState,
-        navigationRequest: (String) -> Unit,
+        navigateToSettingsRequest: () -> Unit,
+        navigateToTabRequest: (route:String)->Unit,
         enableDrawer: Boolean = true,
         currentRoute: () -> String,
         content: @Composable () -> Unit,
@@ -36,15 +41,15 @@ object MainScreen {
             drawerState = drawerState,
             visualTabDestinationList = { navigationDestinations },
             enableDrawer = enableDrawer,
-            navigationRequest = {
-                navigationRequest(it)
+            navigateToSettingsRequest = {
+                navigateToSettingsRequest()
                 scope.launch {
                     drawerState.close()
                 }
             },
-            scrollToPageRequest = {
+            navigateToTabRequest = {
                 scope.launch {
-                    navigationRequest(destinations[it])
+                    navigateToTabRequest(destinations[it])
                 }
                 scope.launch {
                     drawerState.close()
@@ -57,34 +62,36 @@ object MainScreen {
 
     @Composable
     fun MChatScreen(
-        navigationRequest: (String) -> Unit,
+        navController: NavHostController,
         drawerState: DrawerState
     ) {
         ScreenDrawer(
-            navigationRequest = navigationRequest,
+            navigateToTabRequest = navController::navigatePopup,
+            navigateToSettingsRequest = {navController.navigateSingleTop(SettingScreenDestination.route)},
             currentRoute = { ChatScreenTabDestination.realRoute },
             drawerState = drawerState
         ) {
             ChatScreen(
                 drawerState = drawerState,
-                navigationAction = navigationRequest
+                navigationAction = navController::navigateSingleTop
             )
         }
     }
 
     @Composable
     fun MRoleListScreen(
-        navigationRequest: (String) -> Unit,
+        navController: NavHostController,
         drawerState: DrawerState
     ) {
         ScreenDrawer(
-            navigationRequest = navigationRequest,
+            navigateToTabRequest = navController::navigatePopup,
+            navigateToSettingsRequest = {navController.navigateSingleTop(SettingScreenDestination.route)},
             currentRoute = { RoleListScreenTabDestination.realRoute },
             drawerState = drawerState
         ) {
             RoleListScreen(
                 drawerState = drawerState,
-                navigationAction = navigationRequest
+                navigationAction = navController::navigateSingleTop
             )
         }
     }

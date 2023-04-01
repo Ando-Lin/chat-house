@@ -10,7 +10,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.ando.chathouse.R
-import com.ando.chathouse.SettingScreenDestination
 import com.ando.chathouse.ui.theme.ChatHouseTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -18,7 +17,7 @@ import com.ando.chathouse.ui.theme.ChatHouseTheme
 fun TDrawer(
     modifier: Modifier = Modifier,
     drawerState: DrawerState = rememberDrawerState(initialValue = DrawerValue.Closed),
-    navigateAction: (route: String) -> Unit,
+    navigateToSettingsAction: () -> Unit,
     drawerContent: @Composable ColumnScope.() -> Unit,
     enable: Boolean = true,
     content: @Composable () -> Unit
@@ -35,7 +34,7 @@ fun TDrawer(
         drawerContent = {
             ModalDrawerSheet(drawerShape = drawerShape, modifier = modifier.requiredWidth(260.dp)) {
                 drawerContent()
-                TDrawerContent(navigateAction = navigateAction)
+                TDrawerContent(navigateToSettingsAction = navigateToSettingsAction)
             }
         },
         content = content
@@ -47,14 +46,14 @@ fun TDrawer(
 @Composable
 private fun ColumnScope.TDrawerContent(
     modifier: Modifier = Modifier,
-    navigateAction: (route: String) -> Unit,
+    navigateToSettingsAction: () -> Unit,
 ) {
     Spacer(modifier = Modifier.weight(1f))
     Divider(Modifier.padding(horizontal = 20.dp))
     NavigationDrawerItem(
         label = { Text(text = "设置", style = MaterialTheme.typography.labelLarge) },
         selected = false,
-        onClick = { navigateAction(SettingScreenDestination.route) },
+        onClick = navigateToSettingsAction,
         icon = {
             Icon(
                 painter = painterResource(id = R.drawable.ic_outline_settings_24),
@@ -74,7 +73,7 @@ private fun ColumnScope.TDrawerContent(
 fun TDrawerPre() {
     ChatHouseTheme {
         TDrawer(
-            navigateAction = {},
+            navigateToSettingsAction = {},
             drawerState = rememberDrawerState(initialValue = DrawerValue.Open),
             drawerContent = {}
         ) {

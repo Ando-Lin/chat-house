@@ -77,7 +77,7 @@ data class ChatGPTCompletionPara(
     @Json(name = "frequency_penalty")
     val frequencyPenalty:Double = 0.0,
     @Json(name = "logit_bias")
-    val logitBias:Map<String,String>?=null,
+    val logitBias:Map<Int,Int>?=null,
 ){
 
     companion object{

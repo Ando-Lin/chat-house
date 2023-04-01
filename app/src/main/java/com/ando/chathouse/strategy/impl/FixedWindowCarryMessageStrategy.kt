@@ -7,7 +7,7 @@ import com.ando.chathouse.strategy.MutableStatefulCarryMessageStrategy
 import java.util.concurrent.atomic.AtomicInteger
 
 class FixedWindowCarryMessageStrategy() : MutableStatefulCarryMessageStrategy<Int> {
-    override val defaultState: Int = 10
+    override val defaultState: Int = 12
     private var windowSize:Int = defaultState
     private var counter: AtomicInteger = AtomicInteger(0)
 
@@ -25,5 +25,6 @@ class FixedWindowCarryMessageStrategy() : MutableStatefulCarryMessageStrategy<In
 
     companion object{
         private const val TAG = "FixedWindowCarryMessage"
+        val NAME = FixedWindowCarryMessageStrategy::class.simpleName!!
     }
 }

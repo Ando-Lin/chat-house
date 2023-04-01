@@ -1,6 +1,5 @@
 package com.ando.chathouse.model.impl
 
-import android.util.Log
 import com.ando.chathouse.data.api.Authorization
 import com.ando.chathouse.data.api.ChatGPTCompletionPara
 import com.ando.chathouse.data.api.OpenAIApi
@@ -50,7 +49,7 @@ class StreamOpenAIGPT3d5Model internal constructor(
                 while (!source.exhausted()) {
                     val readBytes = source.read(buffer, 8196)
                     string = buffer.readString(Charsets.UTF_8)
-                    Log.i(TAG, "sendMessages: readStream = --start $string --end")
+//                    Log.i(TAG, "sendMessages: readStream = --start $string --end")
                     emit(string)
                 }
                 if (string.lastIndexOf("data: [DONE]") == -1) {
@@ -65,7 +64,6 @@ class StreamOpenAIGPT3d5Model internal constructor(
             if (!it.isNullOrBlank()) emit(it)
         }.map {
             val matcher = pattern.matcher(it)
-            Log.i(TAG, "sendMessages: it = $it")
             return@map when (matcher.find()) {
                 true -> matcher.group(1)
                 else -> null
