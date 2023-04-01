@@ -40,6 +40,7 @@ data class ChatGPTCompletionResponse(
         @Json(name = "finish_reason") val finishReason: String,
     )
 
+    @JsonClass(generateAdapter = true)
     data class Usage(
         @Json(name = "prompt_tokens")
         val promptTokens: Int,
