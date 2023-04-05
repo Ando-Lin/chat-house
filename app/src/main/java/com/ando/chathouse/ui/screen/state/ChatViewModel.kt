@@ -76,15 +76,15 @@ class ChatViewModel @Inject constructor(
             .transformLatest { uid ->
                 uid ?: return@transformLatest
                 val flow = chatRepo.fetchChatById(uid)
-                    .transform {
+                    .transform {entity->
                         //不存在则创建
-                        if (it == null) {
+                        if (entity == null) {
                             val chat = ChatEntity.individual(uid)
                             chatRepo.saveChat(chat)
                                 .onSuccess { emit(chat) }
                                 .onFailure { updateUiMessage("创建对话失败: ${it.localizedMessage}") }
                         } else {
-                            emit(it)
+                            emit(entity)
                         }
                     }
                 emitAll(flow)
@@ -144,9 +144,8 @@ class ChatViewModel @Inject constructor(
     )
         private set
 
-    //保存多选模式下选中的消息id
-    private var selectedMessageIds: MutableSet<Int> = mutableSetOf()
-
+    //多选模式下选中的消息id
+    private var mutableCheckedMap = mutableStateMapOf<Int, Unit>()
 
     /**
      * 更新当前chatId. 写入到datastore中
@@ -161,6 +160,8 @@ class ChatViewModel @Inject constructor(
             }
         }
     }
+
+
 
     fun resetMessage() {
         screenUiState = screenUiState.copy(message = "")
@@ -235,11 +236,11 @@ class ChatViewModel @Inject constructor(
      */
     fun selectedToCarry() {
         viewModelScope.launch {
-            val typedArray = selectedMessageIds.toIntArray()
+            val typedArray = mutableCheckedMap.keys.toIntArray()
             chatRepo.unifyMessage(*typedArray, selected = 1)
                 .onFailure { updateUiMessage("更新选中的消息时发生错误: ${it.localizedMessage}") }
         }
-        selectedMessageIds = mutableSetOf()
+        mutableCheckedMap = mutableStateMapOf()
     }
 
     /**
@@ -247,11 +248,11 @@ class ChatViewModel @Inject constructor(
      */
     fun selectedToExclude() {
         viewModelScope.launch {
-            val typedArray = selectedMessageIds.toIntArray()
+            val typedArray = mutableCheckedMap.keys.toIntArray()
             chatRepo.unifyMessage(*typedArray, selected = -1)
                 .onFailure { updateUiMessage("更新选中的消息时发生错误: ${it.localizedMessage}") }
+            mutableCheckedMap.clear()
         }
-        selectedMessageIds = mutableSetOf()
     }
 
     /**
@@ -259,20 +260,24 @@ class ChatViewModel @Inject constructor(
      */
     fun selectedTODelete() {
         viewModelScope.launch {
-            selectedMessageIds.forEach {
+            mutableCheckedMap.keys.forEach {
                 chatRepo.deleteMessage(it)
                     .onFailure { updateUiMessage("删除选中的消息时发生错误: ${it.localizedMessage}") }
             }
+            mutableCheckedMap.clear()
         }
-        selectedMessageIds = mutableSetOf()
     }
 
     /**
      * 收集选中的消息id
      */
-    fun collectSelectedId(messageId: Int) {
+    fun checkedMessageId(messageId: Int) {
         if (multiSelectMode.value) {
-            selectedMessageIds.add(messageId)
+            if (mutableCheckedMap.containsKey(messageId)){
+                mutableCheckedMap.remove(messageId)
+            }else{
+                mutableCheckedMap[messageId] = Unit
+            }
         }
     }
 
@@ -282,7 +287,11 @@ class ChatViewModel @Inject constructor(
     fun switchMultiSelectModeState(state: Boolean? = null) {
         val targetState = state ?: !(settingsUiState.value.multiSelectMode)
         multiSelectMode.value = targetState
-        selectedMessageIds = mutableSetOf()
+        viewModelScope.launch {
+            if (mutableCheckedMap.isNotEmpty()){
+                mutableCheckedMap.clear()
+            }
+        }
     }
 
     /**
@@ -291,6 +300,11 @@ class ChatViewModel @Inject constructor(
     fun switchEditModeState(state: Boolean? = null) {
         val targetState = state ?: !(settingsUiState.value.editMode)
         editModeState.value = targetState
+        viewModelScope.launch {
+            if (mutableCheckedMap.isNotEmpty()){
+                mutableCheckedMap.clear()
+            }
+        }
     }
 
     fun goOn() {
@@ -436,12 +450,14 @@ class ChatViewModel @Inject constructor(
                                     entity = value,
                                     avatar = avatar,
                                     bubbleTextUiState = BubbleTextUiState(
+                                        id = value.id,
                                         text = { value.text },
                                         isMe = myId == value.uid,
                                         editModeState = editModeState,
                                         selected = selected,
                                         reading = value.status == MessageStatus.Reading,
-                                        multiSelectModeState = multiSelectMode
+                                        multiSelectModeState = multiSelectMode,
+                                        checkedMap = mutableCheckedMap
                                     )
                                 )
                             }

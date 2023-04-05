@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -31,17 +32,15 @@ import com.ando.chathouse.ext.withMutableInteractionSource
 import kotlinx.coroutines.delay
 
 data class BubbleTextUiState(
+    val id: Int,
     val text: () -> String,
     val isMe: Boolean,
     val selected: Boolean,
     val reading: Boolean = false,
+    val checkedMap: SnapshotStateMap<Int, Unit>,
     private val editModeState: State<Boolean>,
     private val multiSelectModeState: State<Boolean>
 ) {
-    internal var checked by mutableStateOf(false)
-
-    @Composable
-    fun checked() = rememberSaveable() { mutableStateOf(false) }
     val editMode: Boolean by editModeState
     val multiSelectMode: Boolean by multiSelectModeState
 }
@@ -80,24 +79,12 @@ fun ExtendedBubbleText(
     modifier: Modifier = Modifier,
     uiState: BubbleTextUiState,
     onLongClick: () -> Unit,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onChecked: (Int) -> Unit,
 ) {
     val (bubbleColor, textColor) = bubbleTextColor(uiState = uiState)
-    var checked by uiState.checked()
-    //关闭多选时取消checked
-    LaunchedEffect(uiState.multiSelectMode, uiState.editMode) {
-        if (!uiState.multiSelectMode || !uiState.editMode) {
-            checked = false
-        }
-    }
-    //当selected变化时说明执行了操作，需要取消checked状态
-    LaunchedEffect(uiState.selected) {
-        checked = false
-    }
-
 
     Box {
-
         BubbleText(
             modifier = modifier,
             text = uiState.text,
@@ -107,35 +94,41 @@ fun ExtendedBubbleText(
             reading = uiState.reading,
             onLongClick = onLongClick,
             onClick = {
-                checked = uiState.multiSelectMode && !checked
-                onClick()
+                if (uiState.multiSelectMode) {
+                    onChecked(uiState.id)
+                } else {
+                    onClick()
+                }
             }
         )
 
-
-        AnimatedVisibility(
-            visible = checked, modifier = Modifier
-                .align(Alignment.Center)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(width = 65.dp, height = 40.dp)
-                    .shadow(elevation = 3.dp, shape = RoundedCornerShape(100))
-                    .background(
-                        color = MaterialTheme.colorScheme.surface,
-                        shape = RoundedCornerShape(100)
-                    )
-                    .padding(5.dp),
-                contentAlignment = Alignment.Center
+        if (uiState.multiSelectMode) {
+            val visible by remember {
+                derivedStateOf { (uiState.checkedMap.containsKey(uiState.id)) }
+            }
+            AnimatedVisibility(
+                visible = visible, modifier = Modifier
+                    .align(Alignment.Center)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
+                Box(
+                    modifier = Modifier
+                        .size(width = 65.dp, height = 40.dp)
+                        .shadow(elevation = 3.dp, shape = RoundedCornerShape(100))
+                        .background(
+                            color = MaterialTheme.colorScheme.surface,
+                            shape = RoundedCornerShape(100)
+                        )
+                        .padding(5.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
-
     }
 }
 

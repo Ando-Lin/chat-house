@@ -131,7 +131,8 @@ fun ChatScreen(
                 onClickAvatar = {
                     navigationAction(ProfileScreenDestination.routeWithArg(it))
                 },
-                onClickBubble = viewModel::collectSelectedId,
+                onClickBubble = {},
+                onChecked = viewModel::checkedMessageId
             )
         }
     }
@@ -264,7 +265,8 @@ fun ChatArea(
     pagingItems: LazyPagingItems<ChatMessageUiState>,
     onLongClick: (uiState: ChatMessageUiState) -> Unit,
     onClickAvatar: (uid: Int) -> Unit,
-    onClickBubble: (msgId: Int) -> Unit
+    onClickBubble: (msgId: Int) -> Unit,
+    onChecked: (Int) -> Unit,
 ) {
     val lazyColumnState = rememberLazyListState()
 
@@ -309,7 +311,8 @@ fun ChatArea(
                     modifier = itemModifier,
                     onLongClick = onLongClickLocal,
                     onClickAvatar = { onClickAvatar(item.uid) },
-                    onClickBubble = { onClickBubble(item.id) }
+                    onClickBubble = { onClickBubble(item.id) },
+                    onChecked = onChecked
                 )
             } else {
                 //占位符
@@ -333,6 +336,7 @@ fun SimpleMessage(
     onLongClick: () -> Unit,
     onClickAvatar: () -> Unit,
     onClickBubble: () -> Unit,
+    onChecked: (Int)->Unit,
 ) {
     //颜色
     val colorScheme = MaterialTheme.colorScheme
@@ -399,7 +403,8 @@ fun SimpleMessage(
                             Modifier.breathingLight(rememberBreathingLightState())
                         )
                         .heightIn(min = avatarSize)
-                        .widthIn(max = this.maxWidth - avatarSize - 10.dp)
+                        .widthIn(max = this.maxWidth - avatarSize - 10.dp),
+                    onChecked = onChecked
                 )
             }
 
