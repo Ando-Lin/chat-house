@@ -4,10 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.paging.PagingSource
-import com.ando.chathouse.constant.MY_UID
-import com.ando.chathouse.constant.PreferencesKey
-import com.ando.chathouse.constant.WRITE_DB_TIME_THRESHOLD
-import com.ando.chathouse.constant.WRITE_DB_TOKEN_THRESHOLD
+import com.ando.chathouse.constant.*
 import com.ando.chathouse.data.source.local.ChatLocalDataSource
 import com.ando.chathouse.di.IoDispatcher
 import com.ando.chathouse.domain.entity.ChatEntity
@@ -27,6 +24,7 @@ import com.ando.chathouse.model.ChatModel
 import com.ando.chathouse.model.ChatModelManger
 import com.ando.chathouse.profile
 import com.ando.chathouse.strategy.CarryMessageStrategyManager
+import com.ando.chathouse.util.TokenUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -47,7 +45,6 @@ class ChatRepoImpl @Inject constructor(
     private val userRepo: UserRepo,
     @ApplicationContext private val context: Context,
 ) : ChatRepo {
-
 
     override val availableModelList: List<String>
         get() = chatModelManger.models.map { it.key }
@@ -122,14 +119,12 @@ class ChatRepoImpl @Inject constructor(
      */
     private suspend fun getHistory(
         chatId: Int,
-        strategy: String
+        strategy: String,
+        isNotReachCeil: (RoleMessage)->Boolean
     ): MutableList<RoleMessage> {
         val pageSize = 20
         val list = mutableListOf<RoleMessage>()
-        //600是指令token的估计值，0.8是中文字符/token的大致比率,需要留出一定token让gpt回答
-        val maxChars: Int = (4096 * 0.65).toInt() - 600
-        //字符计数
-        var count = 0
+
         //用于过滤的上下文
         val chatContext = ChatContext(
             myUid = MY_UID,
@@ -148,15 +143,15 @@ class ChatRepoImpl @Inject constructor(
                 }
             }
             .map {
-                RoleMessage(role = RoleMessage.USER_ROLE, content = it.text)
+                when(it.uid){
+                    MY_UID -> RoleMessage.userMessage(it.text)
+                    else -> RoleMessage.assistantMessage(it.text)
+                }
             }
-            .onEach { value -> count += value.content.length }
-            .takeWhile { count < maxChars }
+            .takeWhile { isNotReachCeil(it) }
             .onEach { list.add(0, it) }
-            .onCompletion {
-                Log.i(TAG, "getHistory: flow onCompletion")
-            }
             .collect()
+
 
         return list
     }
@@ -439,6 +434,8 @@ class ChatRepoImpl @Inject constructor(
         chatId: Int,
         message: String?
     ): List<RoleMessage> {
+        //token计数
+        var tokenCounter = 0
 
         //获取chat
         val chat = withContext(ioDispatcher) {
@@ -459,50 +456,59 @@ class ChatRepoImpl @Inject constructor(
         //获取策略名称
         val strategyName = chat.messageStrategy
 
-        //获取上下文
-        val roleMessages = withContext(ioDispatcher) {
-            getHistory(chatId = chatId, strategy = strategyName)
-        }
-
-        //添加指令
-        if (role.enableGuide) {
-            roleMessages.addAll(
-                0,
+        //预置的消息
+        val prependMessages = when(role.enableGuide){
+            true -> {
                 getInstructionRoleMessages(
                     roleName = role.name,
                     roleDescription = role.description,
                     userName = me.name
                 )
-            )
-        } else {
-            roleMessages.add(
-                0,
-                RoleMessage.systemMessage(role.description)
-            )
+            }
+            else -> listOf(RoleMessage.systemMessage(role.description))
         }
+        //带发送的消息
+        val latestMessage = message?.let { RoleMessage.userMessage(message) }
+        //用于提醒的消息
+        val reminderMessage = RoleMessage.systemMessage(role.reminder)
+
+
+        tokenCounter += TokenUtils.computeToken(prependMessages)
+        tokenCounter += TokenUtils.computeToken(latestMessage)
+        tokenCounter += TokenUtils.computeToken(reminderMessage.takeIf { role.enableReminder })
+
+        //获取上下文
+        val roleMessages = withContext(ioDispatcher) {
+            getHistory(chatId = chatId, strategy = strategyName){
+                //当token剩余量仍大于预留量时返回true，否则返回false
+                tokenCounter += TokenUtils.computeToken(it)
+                return@getHistory (MAX_TOKEN - tokenCounter) > RESERVED_TOKEN
+            }
+        }
+
+        //添加预置指令
+        roleMessages.addAll(index = 0, elements = prependMessages)
 
 
         //添加最新消息
-        message?.let {
+        latestMessage?.let {
             roleMessages.add(
                 roleMessages.size,
-                RoleMessage.userMessage(message)
+                it
             )
         }
-
-
 
         //添加提醒
         if (role.enableReminder) {
             roleMessages.add(
                 roleMessages.size,
-                RoleMessage.systemMessage(role.reminder)
+                reminderMessage
             )
         }
 
 
-        Log.i(TAG, "sendMessage: \n roleMessages = $roleMessages")
-
+        Log.i(TAG, "composeContextForSendMessage: \n roleMessages = $roleMessages")
+        Log.i(TAG, "composeContextForSendMessage: tokenCounter = $tokenCounter")
 
         return roleMessages
     }
