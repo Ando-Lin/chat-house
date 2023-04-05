@@ -85,13 +85,13 @@ fun ExtendedBubbleText(
     val (bubbleColor, textColor) = bubbleTextColor(uiState = uiState)
     var checked by uiState.checked()
     //关闭多选时取消checked
-    LaunchedEffect(uiState.multiSelectMode) {
-        if (!uiState.multiSelectMode) {
+    LaunchedEffect(uiState.multiSelectMode, uiState.editMode) {
+        if (!uiState.multiSelectMode || !uiState.editMode) {
             checked = false
         }
     }
     //当selected变化时说明执行了操作，需要取消checked状态
-    LaunchedKeyEffect(uiState.selected) {
+    LaunchedEffect(uiState.selected) {
         checked = false
     }
 

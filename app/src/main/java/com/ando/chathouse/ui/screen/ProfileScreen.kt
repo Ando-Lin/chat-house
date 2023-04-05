@@ -33,6 +33,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -61,6 +62,10 @@ fun ProfileScreen(
         else -> stringResource(id = R.string.extra_settings)
     }
     val focusManager = LocalFocusManager.current
+    val pageCount = when(uiState.tempUser.id){
+        0 -> 1
+        else -> 2
+    }
 
     //显示消息
     LaunchedEffect(message) {
@@ -99,7 +104,7 @@ fun ProfileScreen(
         topBar = {
             TopBar(
                 title = title,
-                showSave = pagerState.currentPage==0,
+                showSave = pagerState.currentPage == 0,
                 isModified = uiState.isModified,
                 isDialogMode = isDialogMode,
                 onClickBack = checkAndBack,
@@ -107,12 +112,12 @@ fun ProfileScreen(
             )
         },
         modifier = Modifier
-            .pointerInput(Unit){
+            .pointerInput(Unit) {
                 detectTapGestures { focusManager.clearFocus() }
             }
     ) { paddingValues ->
         VerticalPager(
-            pageCount = 2,
+            pageCount = pageCount,
             modifier = Modifier
                 .padding(paddingValues)
                 .fillMaxSize(),
@@ -143,8 +148,15 @@ fun ProfileScreen(
     //弹窗询问是否保存
     AlertDialogForWarningSave(
         dialogVisible = dialogState,
-        onChoiseNotSave = { backAction() },
-        onChoiseSave = { viewModel.saveUser();backAction() },
+        onChoiseNotSave = {
+            dialogState = false
+            backAction()
+        },
+        onChoiseSave = {
+            viewModel.saveUser()
+            dialogState = false
+            backAction()
+        },
         onDismissRequest = { dialogState = false }) {
         Text(text = stringResource(id = R.string.unsaved_warning))
     }
@@ -166,12 +178,15 @@ private fun CommonSettings(
     resultLauncher: ManagedActivityResultLauncher<String, Uri?>,
     updateTempUser: (User) -> Unit
 ) {
+    val baseHeight = 30.dp
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        val itemModifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 10.dp)
+        val itemModifier = Modifier
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 10.dp)
         HeadAndAvatar(
             modifier = Modifier
                 .fillMaxWidth()
@@ -186,7 +201,8 @@ private fun CommonSettings(
             description = stringResource(id = R.string.name_description),
             content = tempUser.name,
             onTextChange = { updateTempUser(tempUser.copy(name = it)) },
-            modifier = itemModifier
+            modifier = itemModifier,
+            textBoxMinHeight = baseHeight
         )
         TextAndInput(
             title = stringResource(id = R.string.role_description),
@@ -194,7 +210,9 @@ private fun CommonSettings(
             content = tempUser.description,
             onTextChange = { updateTempUser(tempUser.copy(description = it)) },
             maxLines = Int.MAX_VALUE,
-            modifier = itemModifier.padding(bottom = 10.dp)
+            textBoxMinHeight = baseHeight * 6,
+            modifier = itemModifier
+                .padding(bottom = 10.dp)
         )
     }
 }
@@ -213,7 +231,7 @@ private fun ExtraSettings(
 ) {
     val info = uiState.info
     //当输入框聚焦状态变化时根据状态启动输入完成函数
-    LaunchedEffect(Unit){
+    LaunchedEffect(Unit) {
         interactionSource.interactions.collect {
             if (it is FocusInteraction.Unfocus) {
                 onReminderInputComplete()
@@ -244,7 +262,10 @@ private fun ExtraSettings(
         AnimatedVisibility(visible = info.enableReminder) {
             TTextField(
                 text = uiState.latestReminder,
-                tip = stringResource(id = R.string.input_on_here_v, stringResource(id = R.string.reminder)),
+                tip = stringResource(
+                    id = R.string.input_on_here_v,
+                    stringResource(id = R.string.reminder)
+                ),
                 onTextChange = onLatestReminderChange,
                 interactionSource = interactionSource,
                 maxLines = 10,
@@ -384,16 +405,15 @@ fun HeadAndAvatar(
 }
 
 @Composable
-fun TextAndInput(
+private fun TextAndInput(
     modifier: Modifier = Modifier,
     title: String,
     description: String,
     content: String,
     maxLines: Int = 1,
-    onTextChange: (String) -> Unit
+    textBoxMinHeight:Dp = 30.dp,
+    onTextChange: (String) -> Unit,
 ) {
-    val basicHeight = 30.dp
-    val minHeight = if (maxLines == 1) basicHeight else basicHeight * maxLines / 2
     Column(modifier = modifier) {
         Text(
             text = title,
@@ -409,14 +429,12 @@ fun TextAndInput(
             tip = description,
             shape = RoundedCornerShape(10.dp),
             modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = minHeight),
+                .heightIn(min = textBoxMinHeight)
+                .fillMaxWidth(),
             maxLines = maxLines
         )
     }
 }
-
-
 
 
 private const val TAG = "ProfileScreen"

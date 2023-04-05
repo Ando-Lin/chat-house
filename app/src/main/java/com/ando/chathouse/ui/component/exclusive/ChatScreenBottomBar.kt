@@ -3,14 +3,11 @@
 package com.ando.chathouse.ui.component.exclusive
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,6 +15,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.ando.chathouse.R
 import com.ando.chathouse.ext.withCondition
+import com.ando.chathouse.ui.component.ReversibleRow
 import com.ando.chathouse.ui.component.TTextField
 
 
@@ -35,6 +33,7 @@ fun ChatScreenExtendedBottomBar(
     modifier: Modifier = Modifier,
     uiState: ChatScreenBottomBarUiState,
     onSend: (fromRight: Boolean, content: String) -> Unit,
+    onGoOn: ()->Unit,
     onTextChange: (String) -> Unit,
     onClickCarry: () -> Unit,
     onClickExclude: () -> Unit,
@@ -64,13 +63,14 @@ fun ChatScreenExtendedBottomBar(
             editMode = uiState.editMode,
             onSend = onSend,
             onTextChange = onTextChange,
+            onGoOn = onGoOn
         )
     }
 }
 
 
 /**
- * 双输入框->对话样本学习
+ * 双输入框
  */
 @Composable
 fun ChatScreenBottomBar(
@@ -78,6 +78,7 @@ fun ChatScreenBottomBar(
     text: ()->String,
     editMode: Boolean,
     onSend: (fromRight: Boolean, content: String) -> Unit,
+    onGoOn: ()->Unit,
     onTextChange: (String) -> Unit,
     rightInteractionSource: MutableInteractionSource = remember {
         MutableInteractionSource()
@@ -86,50 +87,46 @@ fun ChatScreenBottomBar(
         MutableInteractionSource()
     },
 ) {
-    val isLeftFocused by leftInteractionSource.collectIsFocusedAsState()
-    val isRightFocused by rightInteractionSource.collectIsFocusedAsState()
-    //同时聚焦或者同时没聚焦时为true
-    val com = !(isLeftFocused xor isRightFocused)
-    Row(
+    val hasText = remember(text) {
+        derivedStateOf { text().isNotBlank() }
+    }
+    //按钮文字
+    val buttonText = stringResource(id = R.string.send)
+    //当其中一个聚焦时隐藏另一个
+    val rightFocused = rightInteractionSource.collectIsFocusedAsState()
+    val leftFocused = leftInteractionSource.collectIsFocusedAsState()
+    val com = rightFocused.value xor leftFocused.value
+    Column(
         modifier = modifier
             .padding(10.dp)
     ) {
-        if (editMode) {
+        if (editMode && (!com || leftFocused.value)) {
             InputAndSend(
                 text = text,
                 tip = stringResource(id = R.string.they_say_),
                 onSend = { onSend(false, it) },
                 onTextChange = onTextChange,
                 interactionSource = leftInteractionSource,
-                showButton = !com,
                 reverseLayout = true,
-                modifier = Modifier
-                    .withCondition(!com && isRightFocused) {
-                        size(0.dp)
-                    }
-                    .withCondition(com) {
-                        weight(1f)
-                    }
-                    .animateContentSize()
+                modifier = Modifier,
+                buttonText = buttonText,
+                enableButton = hasText.value
             )
-            Spacer(modifier = Modifier.withCondition(com) { width(10.dp) })
+            Spacer(modifier = Modifier.height(10.dp))
         }
-        InputAndSend(
-            text = text,
-            tip = stringResource(id = R.string.i_say_),
-            onSend = { onSend(true, it) },
-            showButton = !editMode or !com,
-            onTextChange = onTextChange,
-            interactionSource = rightInteractionSource,
-            modifier = Modifier
-                .withCondition(!com && isLeftFocused) {
-                    size(0.dp)
-                }
-                .withCondition(com) {
-                    weight(1f)
-                }
-                .animateContentSize()
-        )
+
+        if(!com || !leftFocused.value){
+            InputAndSend(
+                text = text,
+                tip = stringResource(id = R.string.i_say_),
+                onSend = { onSend(true, it) },
+                onTextChange = onTextChange,
+                interactionSource = rightInteractionSource,
+                modifier = Modifier,
+                buttonText = buttonText,
+                enableButton = hasText.value,
+            )
+        }
     }
 }
 
@@ -138,7 +135,10 @@ fun InputAndSend(
     modifier: Modifier = Modifier,
     showButton: Boolean = true,
     text: ()->String,
+    buttonText: String,
     tip: String = "",
+    enableButton: Boolean = true,
+    colors: ButtonColors = ButtonDefaults.buttonColors(),
     onSend: (String) -> Unit,
     onTextChange: (String) -> Unit,
     reverseLayout: Boolean = false,
@@ -146,7 +146,6 @@ fun InputAndSend(
         MutableInteractionSource()
     }
 ) {
-
     val buttonModifier = Modifier
         .withCondition(!showButton) { width(0.dp) }
         .withCondition(!reverseLayout) {
@@ -155,54 +154,29 @@ fun InputAndSend(
         .withCondition(reverseLayout) {
             padding(end = 10.dp)
         }
-    val hasText = remember(text) {
-        derivedStateOf { text().isNotBlank() }
-    }
-    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+
+    ReversibleRow(modifier = modifier, verticalAlignment = Alignment.CenterVertically, reverseLayout = reverseLayout) {
         val textFieldModifier = Modifier
             .weight(1f)
-        if (!reverseLayout) {
-            //输入框
-            TTextField(
-                text = text(),
-                onTextChange = onTextChange,
-                maxLines = 6,
-                modifier = textFieldModifier,
-                tip = tip,
-                interactionSource = interactionSource,
-                shape = RoundedCornerShape(20.dp)
-            )
-
-            //发送按钮
-            Button(
-                onClick = { onSend(text()) },
-                modifier = buttonModifier,
-                enabled = hasText.value
-            ) {
-                Text(
-                    text = stringResource(id = R.string.send), modifier = Modifier
-                )
-            }
-        } else {
-            //发送按钮
-            Button(
-                onClick = { onSend(text()) },
-                modifier = buttonModifier,
-                enabled = hasText.value
-            ) {
-                Text(
-                    text = stringResource(id = R.string.send), modifier = Modifier
-                )
-            }
-            //输入框
-            TTextField(
-                text = text(),
-                onTextChange = onTextChange,
-                maxLines = 6,
-                modifier = textFieldModifier,
-                tip = tip,
-                interactionSource = interactionSource,
-                shape = RoundedCornerShape(20.dp)
+        //输入框
+        TTextField(
+            text = text(),
+            onTextChange = onTextChange,
+            maxLines = 6,
+            modifier = textFieldModifier,
+            tip = tip,
+            interactionSource = interactionSource,
+            shape = RoundedCornerShape(20.dp)
+        )
+        //发送/继续按钮
+        Button(
+            onClick = { onSend(text()) },
+            modifier = buttonModifier,
+            enabled = enableButton,
+            colors = colors,
+        ) {
+            Text(
+                text = buttonText, modifier = Modifier
             )
         }
     }

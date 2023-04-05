@@ -60,7 +60,7 @@
     <string name="openai_api_key">OpenAI API-Key</string>
     <string name="clear">清除</string>
     <string name="receive_interrupted">接收中断</string>
-    <string name="create_copy">创建副本</string>
+    <string name="copy_role">复制角色</string>
     <string name="help_collecting_error">帮助收集错误</string>
     <string name="privacy_collection_statement">隐私收集声明</string>
     <string name="privacy_collection_statement_content_">
@@ -73,4 +73,6 @@
     <string name="fixed_window">固定窗口</string>
     <string name="greedy">贪婪</string>
     <string name="no_carry">不携带</string>
+    <string name="go_on">继续</string>
+    <string name="loading">加载中</string>
 </resources>

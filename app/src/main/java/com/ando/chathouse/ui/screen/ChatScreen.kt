@@ -16,12 +16,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.*
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.items
@@ -30,6 +33,7 @@ import com.ando.chathouse.R
 import com.ando.chathouse.domain.entity.MessageStatus
 import com.ando.chathouse.ext.*
 import com.ando.chathouse.ui.component.*
+import com.ando.chathouse.ui.component.dragfetch.DragFetchState
 import com.ando.chathouse.ui.component.exclusive.ChatScreenExtendedBottomBar
 import com.ando.chathouse.ui.component.exclusive.ChatScreenExtendedTopBar
 import com.ando.chathouse.ui.screen.state.ChatMessageUiState
@@ -97,27 +101,39 @@ fun ChatScreen(
                     onClickCarry = viewModel::selectedToCarry,
                     onClickExclude = viewModel::selectedToExclude,
                     onClickDelete = viewModel::selectedTODelete,
+                    onGoOn = viewModel::goOn
                 )
             }
         }
     ) { paddingValue ->
-        ChatArea(
+        SwipeLoading(
+            isFetching = screenUiState.goOnState,
+            onFetch = viewModel::goOn,
+            fetchIndicator = {
+                FetchIndicator(it)
+            },
+            liftThreshold = (-60).dp,
             modifier = Modifier
                 .padding(paddingValue)
-                .fillMaxSize(),
-            pagingItems = lazyPagingItems,
-            myId = screenUiState.myId,
-            onLongClick = {
-                longPressedMessageUiState = it
-                dialogForOpVisible = true
-                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-            },
-            onClickAvatar = {
-                navigationAction(ProfileScreenDestination.routeWithArg(it))
-            },
-            onClickBubble = viewModel::collectSelectedId
-        )
-
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+        ) {
+            ChatArea(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surface),
+                pagingItems = lazyPagingItems,
+                myId = screenUiState.myId,
+                onLongClick = {
+                    longPressedMessageUiState = it
+                    dialogForOpVisible = true
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                },
+                onClickAvatar = {
+                    navigationAction(ProfileScreenDestination.routeWithArg(it))
+                },
+                onClickBubble = viewModel::collectSelectedId,
+            )
+        }
     }
 
 
@@ -182,6 +198,21 @@ fun ChatScreen(
 
 }
 
+@Composable
+private fun FetchIndicator(dragFetchState: DragFetchState) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text(
+            text = stringResource(R.string.go_on),
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.bodyMedium,
+            letterSpacing = 10.sp
+        )
+        if (dragFetchState.fetching){
+            CircularProgressIndicator(strokeWidth = 8.dp, modifier = Modifier.scale(0.7f))
+        }
+    }
+}
 
 @Composable
 private fun DialogForOperationItem(
@@ -253,7 +284,7 @@ fun ChatArea(
         state = lazyColumnState,
         reverseLayout = true,
         verticalArrangement = Arrangement.spacedBy(10.dp),
-        contentPadding = PaddingValues(horizontal = 10.dp),
+        contentPadding = PaddingValues(10.dp),
         modifier = modifier
     ) {
         val itemModifier = Modifier.fillMaxWidth()
@@ -265,7 +296,7 @@ fun ChatArea(
                 val rememberItem = remember {
                     mutableStateOf(item)
                 }
-                LaunchedKeyEffect(item){
+                LaunchedKeyEffect(item) {
                     rememberItem.value = item
                 }
                 val onLongClickLocal = {
@@ -282,9 +313,11 @@ fun ChatArea(
                 )
             } else {
                 //占位符
-                Box(modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                )
             }
         }
     }

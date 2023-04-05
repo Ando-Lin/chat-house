@@ -144,7 +144,7 @@ fun RoleListScreen(
         if (uid == viewModel.screenUiState.myId) return@TDialog
 
         ClickableIconTextListItem(
-            text = stringResource(id = R.string.create_copy),
+            text = stringResource(id = R.string.copy_role),
             icon = Icons.Default.ContentCopy,
             onClick = {
                 popupVisible = false

@@ -28,10 +28,12 @@ import com.ando.chathouse.model.ChatModelManger
 import com.ando.chathouse.profile
 import com.ando.chathouse.strategy.CarryMessageStrategyManager
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import retrofit2.HttpException
-import java.time.Duration
 import java.time.LocalDateTime
 import javax.inject.Inject
 
@@ -74,7 +76,7 @@ class ChatRepoImpl @Inject constructor(
     ): List<RoleMessage> {
         val formattedName = if (roleName.isNotBlank()) "角色名称:$roleName," else ""
         val formattedDescription = "角色描述:$roleDescription"
-        val formattedUserName = if (userName.isNotBlank()) "请称呼user为\"$userName\"," else ""
+        val formattedUserName = if (userName.isNotBlank()) "你的对面角色叫\"$userName\"." else ""
         return listOf(
             RoleMessage(
                 role = RoleMessage.SYSTEM_ROLE,
@@ -82,7 +84,7 @@ class ChatRepoImpl @Inject constructor(
             ),
             RoleMessage(
                 role = RoleMessage.SYSTEM_ROLE,
-                content = "你正在扮演角色，接下来是这个角色的描述，请以角色口吻回答并描述神情和体态在括号内,根据角色的年龄和描述调整语言风格："
+                content = "你正在扮演角色，${formattedUserName}接下来是你的角色的描述，请以角色口吻回答并描述神情和体态在括号内,根据角色的年龄和描述调整语言风格："
             ),
             RoleMessage(
                 role = RoleMessage.SYSTEM_ROLE,
@@ -208,44 +210,13 @@ class ChatRepoImpl @Inject constructor(
                 val messageId = localDS.insertMessage(message.toEntity())
 
                 try {
-                    //组装上下文和待发送的信息
-                    val roleMessages =
-                        composeContextForSendMessage(chatId = chatId, message = message.text)
-
-                    //发送消息
-                    val messageFlow = sendMessage(modelName, roleMessages)
-
-                    val firstMessage = withContext(ioDispatcher) {
-                        messageFlow.first()
+                    val result = continueSendMessage(modelName = modelName, chatId = chatId, messageContent = message.text){
+                        //查询成功则更新发送状态
+                        withContext(ioDispatcher) {
+                            updateMessage(id = messageId, status = MessageStatus.Success)
+                        }
                     }
-                    //查询成功则更新发送状态
-                    withContext(ioDispatcher) {
-                        updateMessage(id = messageId, status = MessageStatus.Success)
-                    }
-                    //计算时间差
-                    val messageEntity = withContext(ioDispatcher) {
-                        localDS.getLatestMessageByChatId(chatId = chatId).first()
-                    }
-                    val (now, diff) = messageEntity?.timestamp.relativeToNowSecondDiff()
-                    //插入到本地数据库中
-                    val msgId = localDS.insertMessage(
-                        ChatMessageEntity(
-                            chatId = chatId,
-                            uid = chat.uid,
-                            text = firstMessage ?: "",
-                            timestamp = now,
-                            secondDiff = diff,
-                            status = MessageStatus.Reading
-                        )
-                    )
-                    try {
-                        //流式收集信息
-                        streamMessage(messageId = msgId, flow = messageFlow)
-                    } catch (e: Exception) {
-                        throw MessageStreamInterruptException(e)
-                    }
-
-                    return@runCatching msgId
+                    return@runCatching result.getOrThrow()
                 } catch (e: MessageStreamInterruptException) {
                     Log.e(TAG, "sendMessage: 接收消息异常", e)
                     throw e
@@ -284,71 +255,26 @@ class ChatRepoImpl @Inject constructor(
 
 
                 try {
-                    //组装数据
-                    val roleMessages = withContext(ioDispatcher) {
-                        composeContextForSendMessage(
-                            chatId = chatMessage.chatId,
-                            message = chatMessage.text
+                    val result = continueSendMessage(modelName = modelName, chatId = chatId, messageContent = chatMessage.text){
+                        //创建重发的消息
+                        val latestMessage = withContext(ioDispatcher) {
+                            localDS.getLatestMessageByChatId(chatId = chatId).first()
+                        }
+                        val (timestamp, secondDiff) = latestMessage?.timestamp.relativeToNowSecondDiff()
+                        val resentMessage = chatMessage.copy(
+                            id = 0,
+                            secondDiff = secondDiff,
+                            timestamp = timestamp,
+                            status = MessageStatus.Success
                         )
-                    }
-
-                    val messageFlow =
-                        sendMessage(modelName = modelName, roleMessages = roleMessages)
-
-                    //第一个值阻塞收集
-                    val firstMessage = withContext(ioDispatcher) {
-                        messageFlow.first() ?: ""
-                    }
-
-                    //收集最新的两个消息
-                    val latestTwoMessage = withContext(externalScope.coroutineContext) {
-                        getPagingByCid(
-                            chatId = chatMessage.chatId,
-                            pageQuery = PageQuery(pageSize = 2)
-                        ).first()
-                    }
-
-                    //创建重发的消息
-                    val lastMessageTime = getLastMessageTimeForResend(chatMessage, latestTwoMessage)
-                    val (timestamp, secondDiff) = lastMessageTime.relativeToNowSecondDiff()
-                    val resentMessage = chatMessage.copy(
-                        id = 0,
-                        secondDiff = secondDiff,
-                        timestamp = timestamp,
-                        status = MessageStatus.Success
-                    )
-
-                    //删除
-                    withContext(ioDispatcher) {
-                        localDS.deleteMessage(messageId)
-                    }
-
-
-                    val msgId = withContext(ioDispatcher) {
+                        //删除旧消息
+                        withContext(ioDispatcher) {
+                            localDS.deleteMessage(messageId)
+                        }
                         //插入已重发的消息
                         localDS.insertMessage(resentMessage)
-                        delay(700)
-                        //插入第一条响应的消息
-                        val messageCreateTime = LocalDateTime.now()
-                        localDS.insertMessage(
-                            ChatMessageEntity(
-                                chatId = chatId,
-                                uid = chat.uid,
-                                text = firstMessage,
-                                timestamp = messageCreateTime,
-                                secondDiff = Duration.between(timestamp, messageCreateTime).seconds,
-                                status = MessageStatus.Reading
-                            )
-                        )
                     }
-
-                    try {
-                        streamMessage(messageId = msgId, flow = messageFlow)
-                    } catch (e: Exception) {
-                        throw MessageStreamInterruptException(e)
-                    }
-
-                    return@runCatching msgId
+                    return@runCatching result.getOrThrow()
                 } catch (e: MessageStreamInterruptException) {
                     Log.e(TAG, "resendMessage: 接收消息异常", e)
                     throw e
@@ -361,6 +287,54 @@ class ChatRepoImpl @Inject constructor(
                     Log.e(TAG, "resendMessage: 发送异常", e)
                     throw e
                 }
+            }
+        }
+    }
+
+    override suspend fun continueSendMessage(
+        modelName: String,
+        chatId: Int,
+        messageContent: String?,
+        onSendSuccess: (suspend () -> Unit)?
+    ): Result<Int> {
+        return withContext(externalScope.coroutineContext){
+            kotlin.runCatching {
+                val chat = fetchChatById(chatId).first() ?: throw NoSuchChatException(chatId)
+                //组装上下文和待发送的信息
+                val roleMessages =
+                    composeContextForSendMessage(chatId = chatId, message = messageContent)
+
+                //发送消息
+                val messageFlow = sendMessageRequest(modelName, roleMessages)
+
+                val firstMessage = withContext(ioDispatcher) {
+                    messageFlow.first()
+                }
+                //请求成功则执行回调
+                onSendSuccess?.invoke()
+                //计算时间差
+                val messageEntity = withContext(ioDispatcher) {
+                    localDS.getLatestMessageByChatId(chatId = chatId).first()
+                }
+                val (now, diff) = messageEntity?.timestamp.relativeToNowSecondDiff()
+                //插入到本地数据库中
+                val msgId = localDS.insertMessage(
+                    ChatMessageEntity(
+                        chatId = chatId,
+                        uid = chat.uid,
+                        text = firstMessage ?: "",
+                        timestamp = now,
+                        secondDiff = diff,
+                        status = MessageStatus.Reading
+                    )
+                )
+                try {
+                    //流式收集信息
+                    streamMessage(messageId = msgId, flow = messageFlow)
+                } catch (e: Exception) {
+                    throw MessageStreamInterruptException(e)
+                }
+                return@runCatching msgId
             }
         }
     }
@@ -463,7 +437,7 @@ class ChatRepoImpl @Inject constructor(
 
     private suspend fun composeContextForSendMessage(
         chatId: Int,
-        message: String
+        message: String?
     ): List<RoleMessage> {
 
         //获取chat
@@ -509,10 +483,13 @@ class ChatRepoImpl @Inject constructor(
 
 
         //添加最新消息
-        roleMessages.add(
-            roleMessages.size,
-            RoleMessage.userMessage(message)
-        )
+        message?.let {
+            roleMessages.add(
+                roleMessages.size,
+                RoleMessage.userMessage(message)
+            )
+        }
+
 
 
         //添加提醒
@@ -530,7 +507,7 @@ class ChatRepoImpl @Inject constructor(
         return roleMessages
     }
 
-    private suspend fun sendMessage(
+    private suspend fun sendMessageRequest(
         modelName: String,
         roleMessages: List<RoleMessage>,
     ): Flow<String?> {

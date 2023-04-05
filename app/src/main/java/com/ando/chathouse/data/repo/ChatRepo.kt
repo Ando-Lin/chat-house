@@ -43,6 +43,8 @@ interface ChatRepo {
 
     suspend fun resendMessage(modelName: String, messageId: Int): Result<Int>
 
+    suspend fun continueSendMessage(modelName: String, chatId: Int, messageContent:String?=null, onSendSuccess:(suspend ()->Unit)?=null):Result<Int>
+
     suspend fun unifyMessage(vararg id:Int, selected:Int?=null):Result<Unit>
 
     fun fetchChatById(id: Int): Flow<ChatEntity?>

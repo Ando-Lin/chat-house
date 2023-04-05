@@ -44,7 +44,7 @@ class ChatViewModel @Inject constructor(
     private val userRepo: UserRepo,
     @ApplicationContext private val context: Context,
     private val messageStrategyManager: CarryMessageStrategyManager,
-    private val strategyMap:StrategyMap,
+    private val strategyMap: StrategyMap,
     private val external: CoroutineScope
 ) : ViewModel() {
     private val myId = MY_UID
@@ -74,7 +74,7 @@ class ChatViewModel @Inject constructor(
     private val latestChatFlow: StateFlow<ChatEntity?> =
         currentChatIdFlow
             .transformLatest { uid ->
-                uid?:return@transformLatest
+                uid ?: return@transformLatest
                 val flow = chatRepo.fetchChatById(uid)
                     .transform {
                         //不存在则创建
@@ -293,6 +293,35 @@ class ChatViewModel @Inject constructor(
         editModeState.value = targetState
     }
 
+    fun goOn() {
+        //获取当前chatId
+        val chat = latestChatFlow.value
+        if (chat == null) {
+            updateUiMessage("角色不存在")
+            return
+        }
+        updateGoOnState(true)
+        viewModelScope.launch {
+            //获取当前模型
+            val currentModel = currentModelFlow.first()
+            chatRepo.continueSendMessage(
+                modelName = currentModel,
+                chatId = chat.id,
+                onSendSuccess = { updateGoOnState(false) })
+                .onFailure {
+                    updateGoOnState(false)
+                    updateUiMessage("继续指令执行失败：$it")
+                }
+                .onSuccess {
+                    updateGoOnState(false)
+                }
+        }
+    }
+
+    private fun updateGoOnState(state: Boolean) {
+        screenUiState = screenUiState.copy(goOnState = state)
+    }
+
     /**
      * 发送消息
      */
@@ -333,7 +362,6 @@ class ChatViewModel @Inject constructor(
                     }
             }
         } else {
-
             //消息发送
             viewModelScope.launch {
                 //获取当前模型
@@ -376,9 +404,13 @@ class ChatViewModel @Inject constructor(
      */
     private fun getPagingData(): Flow<Flow<PagingData<ChatMessageUiState>>> {
         return latestChatFlow
-            .filter { it != null }
+            .transform {
+                if (it != null) {
+                    emit(it)
+                }
+            }
             .mapLatest { chat ->
-                this.currentStrategyFlow.value = chat!!.messageStrategy
+                this.currentStrategyFlow.value = chat.messageStrategy
                 val user = withContext(viewModelScope.coroutineContext) {
                     userRepo.fetchById(chat.uid).first()
                 }
@@ -449,6 +481,7 @@ data class ChatScreenUiState(
     private val flowFlowPagingData: Flow<Flow<PagingData<ChatMessageUiState>>>,
     val message: String = "",
     val myId: Int = MY_UID,
+    val goOnState: Boolean = false,
     private val topBarUiStateState: State<ChatScreenTopBarUiState>,
     private val bottomBarUiStateState: State<ChatScreenBottomBarUiState>
 ) {
