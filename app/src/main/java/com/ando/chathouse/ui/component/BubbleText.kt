@@ -55,8 +55,8 @@ private fun bubbleTextColor(uiState: BubbleTextUiState): Pair<Color, Color> {
             bubbleColor = colorScheme.primaryContainer
             textColor = colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
         } else {
-            bubbleColor = colorScheme.surfaceColorAtElevation(2.dp)
-            textColor = colorScheme.contentColorFor(bubbleColor).copy(alpha = 0.5f)
+            bubbleColor = colorScheme.inverseSurface.copy(alpha = 0.1f)
+            textColor = colorScheme.onSurface.copy(alpha = 0.5f)
         }
     } else {
         if (uiState.isMe) {

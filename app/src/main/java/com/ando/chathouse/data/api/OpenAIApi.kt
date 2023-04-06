@@ -5,10 +5,7 @@ import com.ando.chathouse.domain.pojo.ChatGPTCompletionPara
 import com.ando.chathouse.domain.pojo.ChatGPTCompletionResponse
 import okhttp3.ResponseBody
 import retrofit2.Response
-import retrofit2.http.Body
-import retrofit2.http.Header
-import retrofit2.http.POST
-import retrofit2.http.Streaming
+import retrofit2.http.*
 
 interface OpenAIApi {
 
@@ -18,8 +15,9 @@ interface OpenAIApi {
      * @param para: 参数
      */
     @POST("/v1/chat/completions")
+    @Headers("Accept: application/json")
     suspend fun queryChatGPT(
-        @Header("Authorization") authorization: Authorization,
+        @Header("Authorization") authorization: Authorization?=null,
         @Body para: ChatGPTCompletionPara
     ): Response<ChatGPTCompletionResponse>
 
@@ -30,9 +28,36 @@ interface OpenAIApi {
     @Streaming
     @POST("/v1/chat/completions")
     suspend fun streamChatGPT(
-        @Header("Authorization") authorization: Authorization,
+        @Header("Authorization") authorization: Authorization?=null,
         @Body para: ChatGPTCompletionPara
     ): ResponseBody
+
+
+    /**
+     * @param url: 完整url
+     * @param authorization: 认证
+     * @param para: 参数
+     */
+    @Streaming
+    @POST
+    suspend fun streamChatGPTNotStandard(
+        @Url url:String,
+        @Header("Authorization") authorization: Authorization?=null,
+        @Body para: ChatGPTCompletionPara
+    ): ResponseBody
+
+    /**
+     * @param url: 完整url
+     * @param authorization: 认证
+     * @param para: 参数
+     */
+    @POST
+    @Headers(value = ["Accept: application/json", "Content-Type: application/json"])
+    suspend fun queryChatGPTNotStandard(
+        @Url url:String,
+        @Header("Authorization") authorization: Authorization?=null,
+        @Body para: ChatGPTCompletionPara
+    ): Response<ChatGPTCompletionResponse>
 
 }
 

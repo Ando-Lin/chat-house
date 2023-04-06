@@ -77,11 +77,11 @@ class ChatRepoImpl @Inject constructor(
         return listOf(
             RoleMessage(
                 role = RoleMessage.SYSTEM_ROLE,
-                content = "${formattedUserName}请你根据你之前的回答扮演角色(若缺少信息则推理后进行对话)."
+                content = "请你根据你之前的回答扮演角色."
             ),
             RoleMessage(
                 role = RoleMessage.SYSTEM_ROLE,
-                content = "你正在扮演角色，${formattedUserName}接下来是你的角色的描述，请以角色口吻回答并描述神情和体态在括号内,根据角色的年龄和描述调整语言风格："
+                content = "你正在扮演角色，${formattedUserName}接下来是你的角色的描述，请以角色口吻回答并描述神情和体态在括号内,根据角色的年龄和描述调整语言"
             ),
             RoleMessage(
                 role = RoleMessage.SYSTEM_ROLE,

@@ -239,8 +239,8 @@ class ChatViewModel @Inject constructor(
             val typedArray = mutableCheckedMap.keys.toIntArray()
             chatRepo.unifyMessage(*typedArray, selected = 1)
                 .onFailure { updateUiMessage("更新选中的消息时发生错误: ${it.localizedMessage}") }
+            mutableCheckedMap.clear()
         }
-        mutableCheckedMap = mutableStateMapOf()
     }
 
     /**

@@ -17,6 +17,7 @@ import java.util.regex.Pattern
 
 class StreamOpenAIGPT3d5Model internal constructor(
     override val baseUrl: String,
+    private val isFullUrl: Boolean = false,
     private val needAPIKey: Boolean = true,
     httpClient: OkHttpClient? = null
 ) : AbstractLongChatModel(), RequireOpenAIAPIKey {
@@ -33,15 +34,25 @@ class StreamOpenAIGPT3d5Model internal constructor(
     private val pattern = Pattern.compile("\"content\":\"([^\"]+)\"")
 
     override fun sendMessages(messages: List<RoleMessage>, para: ChatModel.Para?): Flow<String?> {
-        val apiKey = para?.apiKey
-        if (needAPIKey && apiKey.isNullOrBlank()) {
-            throw IllegalArgumentException("缺少APIKey")
+        val apiKey = when (needAPIKey) {
+            true -> {
+                para?.apiKey.also {
+                    if (it.isNullOrBlank())
+                        throw IllegalArgumentException("缺少APIKey")
+                }
+            }
+            else -> null
         }
 
         return flow<String?> {
-            val responseBody = api.streamChatGPT(
-                Authorization(apiKey!!), ChatGPTCompletionPara(messages = messages, stream = true)
-            )
+            val responseBody = when(isFullUrl){
+                true -> api.streamChatGPTNotStandard(
+                    baseUrl, apiKey?.let { Authorization(it) }, ChatGPTCompletionPara(messages = messages, stream = true)
+                )
+                else -> api.streamChatGPT(
+                    apiKey?.let { Authorization(it) }, ChatGPTCompletionPara(messages = messages, stream = true)
+                )
+            }
             responseBody.use {
                 val source = responseBody.source()
                 val buffer = Buffer()
@@ -79,9 +90,18 @@ class StreamOpenAIGPT3d5Model internal constructor(
             baseUrl: String, needAPIKey: Boolean = true, httpClient: OkHttpClient? = null
         ): StreamOpenAIGPT3d5Model {
             return cache.getOrPut(baseUrl) {
-                StreamOpenAIGPT3d5Model(baseUrl, needAPIKey = needAPIKey, httpClient = httpClient)
+                StreamOpenAIGPT3d5Model(baseUrl, needAPIKey = needAPIKey, httpClient = httpClient, isFullUrl = false)
             }
         }
+
+        fun createNotStandard(
+            fullUrl: String, needAPIKey: Boolean = true, httpClient: OkHttpClient? = null
+        ): StreamOpenAIGPT3d5Model {
+            return cache.getOrPut(fullUrl) {
+                StreamOpenAIGPT3d5Model(fullUrl, needAPIKey = needAPIKey, httpClient = httpClient, isFullUrl = true)
+            }
+        }
+
     }
 
 }
