@@ -16,7 +16,6 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         debug {
-            //开启混淆会导致编译速度变慢，debug通常不开启
             minifyEnabled false
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
@@ -28,8 +27,8 @@ android {
         applicationId "com.ando.chathouse"
         minSdk 26
         targetSdk 33
-        versionCode 1
-        versionName "0.01-alpha"
+        versionCode 2
+        versionName "0.02-alpha"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
