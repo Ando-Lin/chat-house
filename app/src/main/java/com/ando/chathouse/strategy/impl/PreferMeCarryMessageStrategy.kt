@@ -25,11 +25,11 @@ class PreferMeCarryMessageStrategy: MutableStatefulCarryMessageStrategy<Int> {
     }
 
     override fun filter(message: ChatMessageEntity, chatContext: ChatContext): Boolean {
-        if (message.status != MessageStatus.Success)
-            return false
-        if (message.uid == chatContext.myUid)
-            return true
-        return counter.getAndIncrement() < remainAIMessage
+        return when{
+            message.status != MessageStatus.Success && message.status != MessageStatus.Interrupt -> false
+            message.uid == chatContext.myUid -> true
+            else -> counter.getAndIncrement() < remainAIMessage
+        }
     }
 
     companion object {

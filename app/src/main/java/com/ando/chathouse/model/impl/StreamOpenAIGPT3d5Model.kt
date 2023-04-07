@@ -1,5 +1,6 @@
 package com.ando.chathouse.model.impl
 
+import android.util.Log
 import com.ando.chathouse.data.api.OpenAIApi
 import com.ando.chathouse.domain.pojo.Authorization
 import com.ando.chathouse.domain.pojo.ChatGPTCompletionPara
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.*
 import okhttp3.CacheControl
 import okhttp3.OkHttpClient
 import okio.Buffer
+import retrofit2.HttpException
 import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
 
@@ -45,7 +47,7 @@ class StreamOpenAIGPT3d5Model internal constructor(
         }
 
         return flow<String?> {
-            val responseBody = when(isFullUrl){
+            val response = when(isFullUrl){
                 true -> api.streamChatGPTNotStandard(
                     baseUrl, apiKey?.let { Authorization(it) }, ChatGPTCompletionPara(messages = messages, stream = true)
                 )
@@ -53,14 +55,15 @@ class StreamOpenAIGPT3d5Model internal constructor(
                     apiKey?.let { Authorization(it) }, ChatGPTCompletionPara(messages = messages, stream = true)
                 )
             }
-            responseBody.use {
-                val source = responseBody.source()
+            val body = response.body() ?: throw HttpException(response)
+            body.use {
+                val source = it.source()
                 val buffer = Buffer()
                 var string = ""
                 while (!source.exhausted()) {
                     val readBytes = source.read(buffer, 8196)
                     string = buffer.readString(Charsets.UTF_8)
-//                    Log.i(TAG, "sendMessages: readStream = --start $string --end")
+                    Log.i(TAG, "sendMessages: readStream = --start $string --end")
                     emit(string)
                 }
                 if (string.lastIndexOf("data: [DONE]") == -1) {
@@ -79,7 +82,7 @@ class StreamOpenAIGPT3d5Model internal constructor(
                 true -> matcher.group(1)
                 else -> null
             }
-        }.buffer(capacity = 1000)
+        }.buffer(capacity = 200)
     }
 
     companion object {

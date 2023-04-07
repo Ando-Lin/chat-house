@@ -29,6 +29,9 @@
 -keepattributes LineNumberTable,SourceFile
 -renamesourcefileattribute SourceFile
 
+# 保留异常
+-keep class com.ando.chathouse.exception.**
+
 # 保留 android-support
 -dontwarn android.support.design.**
 -keep class android.support.design.** { *; }

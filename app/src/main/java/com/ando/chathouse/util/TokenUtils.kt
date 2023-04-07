@@ -9,14 +9,17 @@ object TokenUtils {
     private val enc = registry.getEncoding(EncodingType.CL100K_BASE) //适用于gpt3.5、gpt4
     //每条消息的额外消费
     private const val PER_MESSAGE_CONSUME = 3
+    private const val TAG = "TokenUtils"
 
     fun computeToken(vararg roleMessage: RoleMessage?):Int{
         //计数器
         var counter = 0
-        roleMessage.forEach {
-            it?.let {
-                counter += enc.countTokens(it.content)
-                counter += PER_MESSAGE_CONSUME
+        Utils.computeTime(TAG){
+            roleMessage.forEach {
+                it?.let {
+                    counter += enc.countTokens(it.content)
+                    counter += PER_MESSAGE_CONSUME
+                }
             }
         }
         return counter
@@ -25,8 +28,10 @@ object TokenUtils {
     fun computeToken(roleMessages: List<RoleMessage>):Int{
         //计数器
         var counter = roleMessages.size * PER_MESSAGE_CONSUME
-        roleMessages.forEach {
-            counter += enc.countTokens(it.content)
+        Utils.computeTime(TAG){
+            roleMessages.forEach {
+                counter += enc.countTokens(it.content)
+            }
         }
         return counter
     }

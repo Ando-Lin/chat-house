@@ -15,7 +15,6 @@ interface OpenAIApi {
      * @param para: 参数
      */
     @POST("/v1/chat/completions")
-    @Headers("Accept: application/json")
     suspend fun queryChatGPT(
         @Header("Authorization") authorization: Authorization?=null,
         @Body para: ChatGPTCompletionPara
@@ -30,7 +29,7 @@ interface OpenAIApi {
     suspend fun streamChatGPT(
         @Header("Authorization") authorization: Authorization?=null,
         @Body para: ChatGPTCompletionPara
-    ): ResponseBody
+    ): Response<ResponseBody>
 
 
     /**
@@ -44,7 +43,7 @@ interface OpenAIApi {
         @Url url:String,
         @Header("Authorization") authorization: Authorization?=null,
         @Body para: ChatGPTCompletionPara
-    ): ResponseBody
+    ): Response<ResponseBody>
 
     /**
      * @param url: 完整url

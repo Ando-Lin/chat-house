@@ -1,6 +1,7 @@
 package com.ando.chathouse.ui.component
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -17,7 +18,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.AnnotatedString
@@ -172,45 +176,12 @@ fun BubbleText(
             }
     ) {
         if (reading) {
-            //流式打印字符.用saveble防止显示异常
-            var newText by rememberSaveable {
-                mutableStateOf("")
-            }
-            val receiveText = text()
-            LaunchedEffect(receiveText) {
-                //根据start和receiveText的长度调整速度或者增量
-                //待打印的数量较多时,增加charDelta,降低delay.反之减少charDelta增大delay
-                var start = receiveText.indexOf(newText) + newText.length
-                val len = receiveText.length - start
-                //每个字符的最长写入时间，超过则触发更新数据库进一步增长len导致延迟问题
-                val perCharTime =
-                    when {
-                        len > 0 -> WRITE_DB_TIME_THRESHOLD / len
-                        else -> 0
-                    }
-                //每个token的最少字符数。例如中文：1~2字=1个token，则理想情况下len（字符数）~=token数，此时应一个字符一个字符的打印
-                val perTokenChar =
-                    when {
-                        len < WRITE_DB_TOKEN_THRESHOLD -> len / WRITE_DB_TOKEN_THRESHOLD
-                        else -> 1
-                    }
-                while (newText.length != receiveText.length) {
-                    val endIndex =
-                        when {
-                            start + perTokenChar >= receiveText.length -> receiveText.length
-                            else -> perTokenChar + start
-                        }
-                    newText += receiveText.subSequence(start, endIndex)
-                    start += perTokenChar
-                    delay(perCharTime)
-                }
-            }
-            TText(
-                text = buildAnnotatedString { append(newText) },
+            AnimatedPrintText(
+                text = text,
                 interactionSource = interactionSource,
                 textColor = textColor,
                 onLongClick = onLongClick,
-                onClick = onClick
+                onClick = onClick,
             )
         } else {
             TText(
@@ -218,7 +189,8 @@ fun BubbleText(
                 interactionSource = interactionSource,
                 textColor = textColor,
                 onLongClick = onLongClick,
-                onClick = onClick
+                onClick = onClick,
+                modifier = Modifier.padding(16.dp)
             )
         }
 
@@ -226,12 +198,99 @@ fun BubbleText(
 }
 
 @Composable
+fun AnimatedPrintText(
+    modifier: Modifier = Modifier,
+    text: ()->String,
+    interactionSource: MutableInteractionSource,
+    textColor: Color,
+    onLongClick: () -> Unit,
+    onClick: () -> Unit,
+) {
+    //流式打印字符.
+    var newText by rememberSaveable {
+        mutableStateOf("")
+    }
+    val receiveText = text()
+    LaunchedEffect(receiveText) {
+        //根据start和receiveText的长度调整速度或者增量
+        //待打印的数量较多时,增加charDelta,降低delay.反之减少charDelta增大delay
+        var start = receiveText.indexOf(newText) + newText.length
+        val len = receiveText.length - start
+        //每个字符的最长写入时间，超过则触发更新数据库进一步增长len导致延迟问题.最长的写入间隔为WRITE_DB_TIME_THRESHOLD
+        val perCharTime =
+            when {
+                len > 0 -> WRITE_DB_TIME_THRESHOLD / len
+                else -> 0
+            }
+        //每个token的最少字符数。例如中文：1字=1、2个token，则理想情况下len（字符数）~=token数，此时应一个字符一个字符的打印
+        val perTokenChar =
+            when {
+                len < WRITE_DB_TOKEN_THRESHOLD -> len / WRITE_DB_TOKEN_THRESHOLD
+                else -> 1
+            }
+        while (newText.length != receiveText.length) {
+            val endIndex =
+                when {
+                    start + perTokenChar >= receiveText.length -> receiveText.length
+                    else -> perTokenChar + start
+                }
+            newText += receiveText.subSequence(start, endIndex)
+            start += perTokenChar
+            delay(perCharTime)
+        }
+    }
+    var textLayoutResult by remember {
+        mutableStateOf<TextLayoutResult?>(null)
+    }
+    //光标动画效果
+    val transition = rememberInfiniteTransition()
+    val animateFloat = transition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = keyframes { this.delayMillis = 500;this.durationMillis = 500 },
+            repeatMode = RepeatMode.Restart
+        )
+    )
+    TText(
+        text = buildAnnotatedString { append(newText) },
+        interactionSource = interactionSource,
+        textColor = textColor,
+        onLongClick = onLongClick,
+        onClick = onClick,
+        modifier = modifier
+            .padding(16.dp)
+            .drawBehind {
+                //绘制光标
+                val strokeWidth = with(density) {
+                    2.dp.toPx()
+                }
+                val rect =
+                    textLayoutResult?.getCursorRect(newText.length) ?: Rect(
+                        Offset.Zero,
+                        Offset.Zero
+                    )
+                drawLine(
+                    color = textColor,
+                    start = rect.topLeft,
+                    end = rect.bottomRight,
+                    strokeWidth = strokeWidth,
+                    alpha = animateFloat.value
+                )
+            },
+        onTextLayout = { textLayoutResult = it }
+    )
+}
+
+@Composable
 private fun TText(
+    modifier: Modifier = Modifier,
     text: AnnotatedString,
     interactionSource: MutableInteractionSource,
     textColor: Color,
     onLongClick: () -> Unit,
     onClick: () -> Unit,
+    onTextLayout: (TextLayoutResult) -> Unit = {}
 ) {
     val layoutResult = remember {
         mutableStateOf<TextLayoutResult?>(null)
@@ -239,8 +298,7 @@ private fun TText(
     val onClickText = { offset: Int -> /*TODO: 点击文字特殊tag做出响应*/ }
     Text(
         text = text,
-        modifier = Modifier
-            .padding(16.dp)
+        modifier = modifier
             .pointerInput(Unit) {
                 detectTapGestures(
                     onLongPress = {
@@ -259,6 +317,7 @@ private fun TText(
             color = textColor, textAlign = TextAlign.Start
         ),
         onTextLayout = {
+            onTextLayout(it)
             layoutResult.value = it
         })
 }

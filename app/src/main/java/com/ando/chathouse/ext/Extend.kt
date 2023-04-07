@@ -21,7 +21,8 @@ fun String.toAnnotatedString(): AnnotatedString {
 //    val pattern = Pattern.compile("")
 //    val matcher = patthis.matcher(this)
     //替换字符换行
-    val newText = this.replace("\\n", "\n")
+    var newText = this.replace("\\n", "\n")
+    newText = newText.replace("\\r", "\r")
     return AnnotatedString(text = newText, spanStyle = SpanStyle())
 }
 

@@ -7,7 +7,7 @@ import com.ando.chathouse.strategy.CarryMessageStrategy
 
 class GreedyCarryMessageStrategy: CarryMessageStrategy {
     override fun filter(message: ChatMessageEntity, chatContext: ChatContext): Boolean {
-        return message.status == MessageStatus.Success
+        return message.status == MessageStatus.Success || message.status == MessageStatus.Interrupt
     }
 
 }

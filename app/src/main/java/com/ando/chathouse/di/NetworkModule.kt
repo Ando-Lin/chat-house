@@ -7,8 +7,6 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.flow.*
 import okhttp3.*
 import okhttp3.logging.HttpLoggingInterceptor
-import okio.Buffer
-import okio.BufferedSource
 import java.util.concurrent.TimeUnit
 
 @Module
@@ -17,8 +15,7 @@ object NetworkModule {
     @Provides
     fun provideHttpClient(): OkHttpClient =
         OkHttpClient.Builder()
-            .connectTimeout(timeout = 40, unit = TimeUnit.SECONDS)
-            .callTimeout(timeout = 40, unit = TimeUnit.SECONDS)
+            .connectTimeout(timeout = 20, unit = TimeUnit.SECONDS)
             .readTimeout(timeout = 40, unit = TimeUnit.SECONDS)
             .writeTimeout(timeout = 40, unit = TimeUnit.SECONDS)
             .addInterceptor {
@@ -42,37 +39,4 @@ object NetworkModule {
             .build()
 
 
-    class ChunksInterceptor(private val callback: (BufferedSource) -> Unit) : Interceptor {
-        //okhttp可能并发，给多个订阅者可能会造成混乱
-        override fun intercept(chain: Interceptor.Chain): Response {
-            val originalResponse = chain.proceed(chain.request())
-            val contentType = originalResponse.header("content-type") ?: ""
-            if (!contentType.contentEquals("text/event-stream")) {
-                return originalResponse
-            }
-            val responseBody = originalResponse.body
-            val source = responseBody!!.source()
-
-            val buffer = Buffer() // We create our own Buffer
-
-            // Returns true if there are no more bytes in this source
-//            while (!source.exhausted()) {
-//                val readBytes = source.read(buffer, Long.MAX_VALUE) // We read the whole buffer
-//                val data = buffer.readString(Charsets.UTF_8)
-//
-//                println("Read: $readBytes bytes")
-//                println("Content: \n--$data--\n")
-//            }
-
-//            originalResponse
-//                .newBuilder()
-//                .body(
-//                    ResponseBody.create(responseBody.contentType(), responseBody.contentLength())
-//                {sink->
-//
-//                })
-
-            return originalResponse
-        }
-    }
 }

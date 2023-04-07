@@ -101,6 +101,8 @@ class ProfileViewModel @Inject constructor(
                     .onSuccess {
                         //更新id，防止多次保存新user
                         latestUser = latestUser.copy(id = it)
+                        //更新extrasInfo的id信息，避免保存丢失
+                        extrasInfoState = extrasInfoState.copy(id = it)
                         updateTempUser(latestUser)
                     }
             } else {

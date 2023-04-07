@@ -20,7 +20,12 @@ class FixedWindowCarryMessageStrategy() : MutableStatefulCarryMessageStrategy<In
     }
 
     override fun filter(message: ChatMessageEntity, chatContext: ChatContext): Boolean {
-        return message.status == MessageStatus.Success && counter.getAndIncrement() < windowSize
+        return when(message.status){
+            MessageStatus.Success, MessageStatus.Interrupt -> {
+                counter.getAndIncrement() < windowSize
+            }
+            else -> false
+        }
     }
 
     companion object{
