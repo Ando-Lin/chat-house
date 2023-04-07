@@ -101,7 +101,7 @@ class ChatViewModel @Inject constructor(
     private var titleFlow = latestChatFlow
         .filter { it != null }
         .flatMapLatest { userRepo.fetchById(it!!.uid) }
-        .map { it?.name ?: "" }
+        .map { it?.name }
 
 
     private val editModeState = mutableStateOf(false)

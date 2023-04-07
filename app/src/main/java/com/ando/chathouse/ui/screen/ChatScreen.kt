@@ -75,7 +75,7 @@ fun ChatScreen(
             ChatScreenExtendedTopBar(
                 uiState = screenUiState.topBarUiState,
                 onClickMenu = { scope.launch { drawerState.open() } },
-                onClickActionIcon = viewModel::switchEditModeState,
+                onClickEditButton = viewModel::switchEditModeState,
                 onSelectModel = viewModel::updateCurrentModel,
                 onSelectStrategy = viewModel::updateStrategy,
                 onMultiSelectModeChange = viewModel::switchMultiSelectModeState,

@@ -46,13 +46,13 @@ data class ChatScreenSettingsUiState(
 }
 
 data class ChatScreenTopBarUiState(
-    private val titleFlow: Flow<String>,
+    private val titleFlow: Flow<String?>,
     private val settingsUiStateState: State<ChatScreenSettingsUiState>
 ) {
     val settingsUiState by settingsUiStateState
 
     @Composable
-    fun title() = titleFlow.collectAsState(initial = "").value
+    fun title() = titleFlow.collectAsState(initial = null).value
 }
 
 @Composable
@@ -60,7 +60,7 @@ fun ChatScreenExtendedTopBar(
     modifier: Modifier = Modifier,
     uiState: ChatScreenTopBarUiState,
     onClickMenu: () -> Unit,
-    onClickActionIcon: () -> Unit,
+    onClickEditButton: () -> Unit,
     onSelectModel: (model: String) -> Unit,
     onSelectStrategy: (strategy: String) -> Unit,
     onMultiSelectModeChange: (Boolean) -> Unit,
@@ -70,10 +70,11 @@ fun ChatScreenExtendedTopBar(
     val settingsUiState = uiState.settingsUiState
     Column(modifier) {
         ChatScreenTopBar(
-            title = title,
+            title = title?:"",
             editMode = settingsUiState.editMode,
+            showEditButton = title!=null,
             onClickMenu = onClickMenu,
-            onClickActionIcon = onClickActionIcon
+            onClickEditButton = onClickEditButton
         )
         ChatSettings(
             uiState = settingsUiState,
@@ -92,8 +93,9 @@ private fun ChatScreenTopBar(
     modifier: Modifier = Modifier,
     title: String,
     editMode: Boolean,
+    showEditButton: Boolean = true,
     onClickMenu: () -> Unit,
-    onClickActionIcon: () -> Unit
+    onClickEditButton: () -> Unit
 ) {
     CenterAlignedTopAppBar(
         modifier = modifier,
@@ -111,17 +113,20 @@ private fun ChatScreenTopBar(
             }
         },
         actions = {
-            FilledIconToggleButton(
-                checked = editMode,
-                onCheckedChange = { onClickActionIcon() },
-                modifier = Modifier.scale(0.8f),
-                colors = IconButtonDefaults.filledIconToggleButtonColors(containerColor = Color.Transparent)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = stringResource(id = R.string.edit_mode),
-                )
+            if (showEditButton){
+                FilledIconToggleButton(
+                    checked = editMode,
+                    onCheckedChange = { onClickEditButton() },
+                    modifier = Modifier.scale(0.8f),
+                    colors = IconButtonDefaults.filledIconToggleButtonColors(containerColor = Color.Transparent)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = stringResource(id = R.string.edit_mode),
+                    )
+                }
             }
+
         }
     )
 }
