@@ -18,7 +18,7 @@ AI过家家。使用openAI的gpt3.5API作为对话模型的角色扮演聊天安
 
 1. 主界面右划打开侧边栏，点击⌈角色列表⌋，进入角色列表界面
 2. 点击右上角⌈+⌋，创建新角色
-3. 填入名称和角色描述后，点击右上角⌈<img src="file:///C:/Users/ando/Downloads/save_FILL0_wght400_GRAD0_opsz48.png" title="" alt="save_FILL0_wght400_GRAD0_opsz48" style="zoom:80%;">⌋图标保存
+3. 填入名称和角色描述后，点击右上角⌈<img src="./img/save_FILL0_wght400_GRAD0_opsz48.png" title="" alt="save_FILL0_wght400_GRAD0_opsz48" style="zoom:80%;">⌋图标保存
 
 ##### 2. 聊天
 
@@ -42,15 +42,15 @@ AI过家家。使用openAI的gpt3.5API作为对话模型的角色扮演聊天安
 
 在角色列表处点击⌈角色设计助手⌋进入角色设计助手聊天页面，向角色设计助手说明自己的角色要求。例子如下
 
-<img title="" src="file:///C:/Users/ando/Pictures/S30407-15383219.jpg" alt="S30407-15383219" style="zoom:33%;">
+<img title="" src="./img/S30407-15383219.jpg" alt="S30407-15383219" style="zoom:33%;">
 
 长按信息进行复制，然后添加新角色，对复制的内容进行小部分删改，输入完成点击右上角保存
 
-<img title="" src="file:///C:/Users/ando/Downloads/Screenshots/S30407-15390947.png" alt="S30407-15390947" style="zoom:33%;">
+<img title="" src="./img/S30407-15390947.png" alt="S30407-15390947" style="zoom:33%;">
 
 ##### 2. 编辑模式
 
-在聊天页面中点击右上角⌈![editFILL0wght400GRAD0opsz48](file:///C:/Users/ando/Downloads/edit_FILL0_wght400_GRAD0_opsz48.png?msec=1680884631473)⌋，进入编辑模式，
+在聊天页面中点击右上角⌈![editFILL0wght400GRAD0opsz48](./img/edit_FILL0_wght400_GRAD0_opsz48.png?msec=1680884631473)⌋，进入编辑模式，
 
 ###### 1. 切换聊天的模型
 
@@ -77,7 +77,7 @@ AI过家家。使用openAI的gpt3.5API作为对话模型的角色扮演聊天安
 - 角色引导：发送信息前会前置一段System指令信息，引导AI扮演角色。开关启用时，⌈名称⌋、⌈角色描述⌋、用户的⌈名称⌋是有效的。当开关关闭时，⌈角色描述⌋将作为完全的System指令信息（由于内置的角色引导prompt并没有经过特别的优化调整，不一定能很好的引导AI进行角色扮演，所以推荐用户将开关关闭自己动手试验），对于部分角色扮演比如说用于学习的语言教师或者AI助手等请关闭开关，避免出现不必要的动作神态描述
 
 - 提醒模式：打开后将在发送信息的末尾添加一条System指令信息。
-
-
-
-
+  
+  
+  
+  
