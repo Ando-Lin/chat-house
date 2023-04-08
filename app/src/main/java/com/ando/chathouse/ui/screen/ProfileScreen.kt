@@ -44,6 +44,7 @@ import com.ando.chathouse.ui.component.*
 import com.ando.chathouse.ui.screen.state.ProfileExtraSettingUiState
 import com.ando.chathouse.ui.screen.state.ProfileViewModel
 import com.ando.chathouse.util.Utils
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,8 +70,13 @@ fun ProfileScreen(
 
     //显示消息
     LaunchedEffect(message) {
-        if (message.isNotBlank()) {
+        if (message.isBlank()) return@LaunchedEffect
+        launch {
             SnackbarUI.showMessage(message)
+        }
+    }
+    DisposableEffect(Unit){
+        onDispose {
             viewModel.resetMessage()
         }
     }

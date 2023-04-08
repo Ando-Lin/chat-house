@@ -302,33 +302,39 @@ class ChatRepoImpl @Inject constructor(
                 //发送消息
                 val messageFlow = sendMessageRequest(modelName, roleMessages)
 
-                val firstMessage = withContext(ioDispatcher) {
-                    messageFlow.first()
-                }
-                //请求成功则执行回调
-                onSendSuccess?.invoke()
-                //计算时间差
-                val messageEntity = withContext(ioDispatcher) {
-                    localDS.getLatestMessageByChatId(chatId = chatId).first()
-                }
-                val (now, diff) = messageEntity?.timestamp.relativeToNowSecondDiff()
-                //插入到本地数据库中
-                val msgId = localDS.insertMessage(
-                    ChatMessageEntity(
-                        chatId = chatId,
-                        uid = chat.uid,
-                        text = firstMessage ?: "",
-                        timestamp = now,
-                        secondDiff = diff,
-                        status = MessageStatus.Reading
+                //手动设置id
+                val msgId = System.currentTimeMillis().toInt()
+
+                //接收成功时
+                val onReceive:suspend (String?)->Unit = {firstMsg->
+                    //请求成功则执行回调
+                    onSendSuccess?.invoke()
+                    //计算时间差
+                    val messageEntity = withContext(ioDispatcher) {
+                        localDS.getLatestMessageByChatId(chatId = chatId).first()
+                    }
+                    val (now, diff) = messageEntity?.timestamp.relativeToNowSecondDiff()
+                    //插入到本地数据库中
+                    localDS.insertMessage(
+                        ChatMessageEntity(
+                            id = msgId,
+                            chatId = chatId,
+                            uid = chat.uid,
+                            text = firstMsg ?: "",
+                            timestamp = now,
+                            secondDiff = diff,
+                            status = MessageStatus.Reading
+                        )
                     )
-                )
-                try {
-                    //流式收集信息
-                    streamMessage(messageId = msgId, flow = messageFlow)
-                } catch (e: Exception) {
-                    throw MessageStreamInterruptException(e)
                 }
+
+                //流式收集信息
+                streamMessage(messageId = msgId, flow = messageFlow){
+                    launch {
+                        onReceive(it)
+                    }
+                }
+
                 return@runCatching msgId
             }
         }
@@ -337,7 +343,7 @@ class ChatRepoImpl @Inject constructor(
     /**
      * 流式收集消息
      */
-    private suspend fun streamMessage(messageId: Int, flow: Flow<String?>) {
+    private suspend fun streamMessage(messageId: Int, flow: Flow<String?>, onReceive: suspend (String?)->Unit = {}) {
         val stringBuilder = StringBuilder()
         //token增量
         var tokenDelta = 0
@@ -345,6 +351,7 @@ class ChatRepoImpl @Inject constructor(
         var timeDelta: Long
         //上次操作时间
         var lastTimeMillis = System.currentTimeMillis()
+        var first = true
         withContext(ioDispatcher) {
             flow
                 .onCompletion { throwable ->
@@ -358,6 +365,12 @@ class ChatRepoImpl @Inject constructor(
                     updateMessage(messageId, status = status)
                 }
                 .collect {
+                    //接收第一条消息
+                    if (first){
+                        onReceive(it)
+                        first = false
+                    }
+
                     it ?: return@collect
 
                     stringBuilder.append(it)

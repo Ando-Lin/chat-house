@@ -31,6 +31,9 @@ import androidx.paging.compose.items
 import com.ando.chathouse.ProfileScreenDestination
 import com.ando.chathouse.R
 import com.ando.chathouse.domain.entity.MessageStatus
+import com.ando.chathouse.domain.pojo.Container
+import com.ando.chathouse.domain.pojo.getValue
+import com.ando.chathouse.domain.pojo.setValue
 import com.ando.chathouse.ext.*
 import com.ando.chathouse.ui.component.*
 import com.ando.chathouse.ui.component.dragfetch.DragFetchState
@@ -61,8 +64,14 @@ fun ChatScreen(
 
     LaunchedEffect(uiMessage) {
         if (uiMessage.isBlank()) return@LaunchedEffect
-        SnackbarUI.showMessage(uiMessage)
-        viewModel.resetMessage()
+        launch {
+            SnackbarUI.showMessage(uiMessage)
+        }
+    }
+    DisposableEffect(Unit){
+        onDispose {
+            viewModel.resetMessage()
+        }
     }
 
     Scaffold(
@@ -269,17 +278,22 @@ fun ChatArea(
     onChecked: (Int) -> Unit,
 ) {
     val lazyColumnState = rememberLazyListState()
-
-    //查看最新消息时
-    //TODO: 导航到最新消息的浮动按钮
-    val isLookAtLatest by remember {
-        derivedStateOf { lazyColumnState.firstVisibleItemIndex <= 4 }
+    var lastItemCount by remember{
+        Container(0)
     }
-    LaunchedEffect(pagingItems.loadState.refresh) {
-        //分页加载状态
-        if (isLookAtLatest) {
-            lazyColumnState.animateScrollToItem(0)
+    //TODO: 导航到最新消息的浮动按钮
+    //prepend：从本地库的加载状态
+    val prepended = pagingItems.loadState.prepend.endOfPaginationReached
+    LaunchedEffect(pagingItems.itemCount) {
+        //新增记录则滚动到最新消息
+        if (lastItemCount<pagingItems.itemCount){
+            //检查是否已经装配好，是否已显示最新
+            if (prepended && lazyColumnState.firstVisibleItemIndex!=0) {
+                lazyColumnState.animateScrollToItem(0)
+            }
         }
+        //更新
+        lastItemCount = pagingItems.itemCount
     }
     //上下反转的惰性列表
     LazyColumn(
