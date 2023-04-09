@@ -75,7 +75,7 @@ interface ChatDao {
     ): Flow<List<ChatMessageEntity>>
 
     @Query("update chat_msg set status = :status where id = :id")
-    suspend fun updateMessageStatus(id: Int, status: MessageStatus)
+    suspend fun updateMessageStatus(id: Int, status: MessageStatus):Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE, entity = ChatMessageEntity::class)
     suspend fun insertMessage(vararg chatMessageEntities: ChatMessageEntity): List<Long>
@@ -87,10 +87,10 @@ interface ChatDao {
     suspend fun shiftMessageStatus(originStatus: MessageStatus, targetStatus: MessageStatus)
 
     @Query("update chat_msg set text = :message where id = :id")
-    suspend fun updateMessage(id: Int, message: String)
+    suspend fun updateMessage(id: Int, message: String):Int
 
     @Query("update chat_msg set selected = :selected where id in (:id)")
-    suspend fun updateSelectedState(vararg id: Int, selected: Int)
+    suspend fun updateSelectedState(vararg id: Int, selected: Int):Int
 
     @Query("select count(id) from chat_msg where chat_id = :chatId")
     suspend fun getTotalByCid(chatId: Int): Long

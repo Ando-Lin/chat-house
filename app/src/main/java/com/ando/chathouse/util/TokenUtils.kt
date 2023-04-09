@@ -14,12 +14,10 @@ object TokenUtils {
     fun computeToken(vararg roleMessage: RoleMessage?):Int{
         //计数器
         var counter = 0
-        Utils.computeTime(TAG){
-            roleMessage.forEach {
-                it?.let {
-                    counter += enc.countTokens(it.content)
-                    counter += PER_MESSAGE_CONSUME
-                }
+        roleMessage.forEach {
+            it?.let {
+                counter += enc.countTokens(it.content)
+                counter += PER_MESSAGE_CONSUME
             }
         }
         return counter
@@ -28,10 +26,8 @@ object TokenUtils {
     fun computeToken(roleMessages: List<RoleMessage>):Int{
         //计数器
         var counter = roleMessages.size * PER_MESSAGE_CONSUME
-        Utils.computeTime(TAG){
-            roleMessages.forEach {
-                counter += enc.countTokens(it.content)
-            }
+        roleMessages.forEach {
+            counter += enc.countTokens(it.content)
         }
         return counter
     }

@@ -15,7 +15,7 @@ interface ChatDataSource {
     fun getMessagePagingByCid(chatId: Int, uid: Int?=null, pageQuery: PageQuery):Flow<List<ChatMessageEntity>>
     suspend fun insertMessage(chatMessageEntity: ChatMessageEntity): Int
     suspend fun deleteMessage(id: Int)
-    suspend fun updateMessage(id: Int, status: MessageStatus?=null, msg:String?=null, selected: Int?=null)
+    suspend fun updateMessage(id: Int, status: MessageStatus?=null, msg:String?=null, selected: Int?=null):Int
     suspend fun unifyMessage(vararg id: Int, selected: Int?=null)
     suspend fun shiftStatus(originStatus:MessageStatus, targetStatus:MessageStatus)
     fun getTotalByCid(chatId: Int, uid: Int?=null): Flow<Int>

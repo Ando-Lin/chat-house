@@ -14,10 +14,7 @@ import com.ando.chathouse.domain.pojo.ChatContext
 import com.ando.chathouse.domain.pojo.ChatMessage
 import com.ando.chathouse.domain.pojo.PageQuery
 import com.ando.chathouse.domain.pojo.RoleMessage
-import com.ando.chathouse.exception.HttpRequestException
-import com.ando.chathouse.exception.MessageStreamInterruptException
-import com.ando.chathouse.exception.NoSuchChatException
-import com.ando.chathouse.exception.NoSuchUserException
+import com.ando.chathouse.exception.*
 import com.ando.chathouse.ext.relativeToNowSecondDiff
 import com.ando.chathouse.ext.toEntity
 import com.ando.chathouse.model.ChatModel
@@ -120,7 +117,7 @@ class ChatRepoImpl @Inject constructor(
     private suspend fun getHistory(
         chatId: Int,
         strategy: String,
-        isNotReachCeil: (RoleMessage)->Boolean
+        isNotReachCeil: (RoleMessage) -> Boolean
     ): MutableList<RoleMessage> {
         val pageSize = 20
         val list = mutableListOf<RoleMessage>()
@@ -143,7 +140,7 @@ class ChatRepoImpl @Inject constructor(
                 }
             }
             .map {
-                when(it.uid){
+                when (it.uid) {
                     MY_UID -> RoleMessage.userMessage(it.text)
                     else -> RoleMessage.assistantMessage(it.text)
                 }
@@ -205,7 +202,11 @@ class ChatRepoImpl @Inject constructor(
                 val messageId = localDS.insertMessage(message.toEntity())
 
                 try {
-                    val result = continueSendMessage(modelName = modelName, chatId = chatId, messageContent = message.text){
+                    val result = continueSendMessage(
+                        modelName = modelName,
+                        chatId = chatId,
+                        messageContent = message.text
+                    ) {
                         //查询成功则更新发送状态
                         withContext(ioDispatcher) {
                             updateMessage(id = messageId, status = MessageStatus.Success)
@@ -250,7 +251,11 @@ class ChatRepoImpl @Inject constructor(
 
 
                 try {
-                    val result = continueSendMessage(modelName = modelName, chatId = chatId, messageContent = chatMessage.text){
+                    val result = continueSendMessage(
+                        modelName = modelName,
+                        chatId = chatId,
+                        messageContent = chatMessage.text
+                    ) {
                         //创建重发的消息
                         val latestMessage = withContext(ioDispatcher) {
                             localDS.getLatestMessageByChatId(chatId = chatId).first()
@@ -305,8 +310,12 @@ class ChatRepoImpl @Inject constructor(
                 //手动设置id
                 val msgId = System.currentTimeMillis().toInt()
 
+                //发送成功flag
+                var sendSuccessful = false
+
                 //接收成功时
-                val onReceive:suspend (String?)->Unit = {firstMsg->
+                val onReceive: suspend (String?) -> Unit = { firstMsg ->
+                    sendSuccessful = true
                     //请求成功则执行回调
                     onSendSuccess?.invoke()
                     //计算时间差
@@ -328,10 +337,21 @@ class ChatRepoImpl @Inject constructor(
                     )
                 }
 
-                //流式收集信息
-                streamMessage(messageId = msgId, flow = messageFlow){
-                    launch {
+                try {
+                    //流式收集信息
+                    streamMessage(messageId = msgId, flow = messageFlow) {
+                        //这里阻塞运行，避免后续更新失败
                         onReceive(it)
+                    }
+                }catch (e:UpdateFailedException){
+                    Log.i(TAG, "continueSendMessage: 更新失败", e)
+                    //不处理
+                } catch (e: Exception) {
+                    //发送成功后将异常视为中断异常
+                    if (sendSuccessful) {
+                        throw MessageStreamInterruptException(e)
+                    } else {
+                        throw e
                     }
                 }
 
@@ -343,7 +363,11 @@ class ChatRepoImpl @Inject constructor(
     /**
      * 流式收集消息
      */
-    private suspend fun streamMessage(messageId: Int, flow: Flow<String?>, onReceive: suspend (String?)->Unit = {}) {
+    private suspend fun streamMessage(
+        messageId: Int,
+        flow: Flow<String?>,
+        onReceive: suspend (String?) -> Unit = {}
+    ) {
         val stringBuilder = StringBuilder()
         //token增量
         var tokenDelta = 0
@@ -366,7 +390,7 @@ class ChatRepoImpl @Inject constructor(
                 }
                 .collect {
                     //接收第一条消息
-                    if (first){
+                    if (first) {
                         onReceive(it)
                         first = false
                     }
@@ -383,7 +407,12 @@ class ChatRepoImpl @Inject constructor(
 
                     //增量超过阈值时写入数据库
                     if (timeDelta > WRITE_DB_TIME_THRESHOLD || tokenDelta > WRITE_DB_TOKEN_THRESHOLD) {
-                        updateMessage(messageId, stringBuilder.toString())
+                        val result =
+                            updateMessage(messageId, stringBuilder.toString())
+                        //消息可能被删除了，抛出异常终止上游接收
+                        if (result.getOrNull() != 1) {
+                            throw UpdateFailedException("更新消息失败，可能未插入或者已删除: message id = $messageId")
+                        }
                         lastTimeMillis = nowMillis
                         tokenDelta = 0
                     }
@@ -470,7 +499,7 @@ class ChatRepoImpl @Inject constructor(
         val strategyName = chat.messageStrategy
 
         //预置的消息
-        val prependMessages = when(role.enableGuide){
+        val prependMessages = when (role.enableGuide) {
             true -> {
                 getInstructionRoleMessages(
                     roleName = role.name,
@@ -492,7 +521,7 @@ class ChatRepoImpl @Inject constructor(
 
         //获取上下文
         val roleMessages = withContext(ioDispatcher) {
-            getHistory(chatId = chatId, strategy = strategyName){
+            getHistory(chatId = chatId, strategy = strategyName) {
                 //当token剩余量仍大于预留量时返回true，否则返回false
                 tokenCounter += TokenUtils.computeToken(it)
                 return@getHistory (MAX_TOKEN - tokenCounter) > RESERVED_TOKEN
@@ -519,8 +548,6 @@ class ChatRepoImpl @Inject constructor(
             )
         }
 
-
-        Log.i(TAG, "composeContextForSendMessage: \n roleMessages = $roleMessages")
         Log.i(TAG, "composeContextForSendMessage: tokenCounter = $tokenCounter")
 
         return roleMessages
@@ -560,7 +587,7 @@ class ChatRepoImpl @Inject constructor(
         id: Int,
         msg: String?,
         status: MessageStatus?
-    ): Result<Unit> {
+    ): Result<Int> {
         return withContext(externalScope.coroutineContext) {
             kotlin.runCatching {
                 localDS.updateMessage(id, status, msg)

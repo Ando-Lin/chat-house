@@ -61,11 +61,11 @@ object Utils {
                 val downScale = bitmap.scale(width = width, height = height)
                 return RenderScriptToolkit.blur(downScale, 10)
             }
-        }catch (e:FileNotFoundException){
+        } catch (e: FileNotFoundException) {
             runBlocking {
                 SnackbarUI.showMessage("图片文件未找到")
             }
-        }catch (e:Exception){
+        } catch (e: Exception) {
             CrashReport.postCatchedException(e)
             e.printStackTrace()
             runBlocking {
@@ -87,11 +87,12 @@ object Utils {
         )
 
 
-    inline fun <R> computeTime(tag:String, block:()->R){
+    inline fun <R> computeTime(tag: String, message: String = "", block: () -> R): R {
         val start = System.currentTimeMillis()
-        block()
+        val value = block()
         val end = System.currentTimeMillis()
-        Log.i(tag, "computeTime: ${end - start}")
+        Log.i(tag, "$message time: ${end - start}")
+        return value
     }
 
     private const val TAG = "Utils"

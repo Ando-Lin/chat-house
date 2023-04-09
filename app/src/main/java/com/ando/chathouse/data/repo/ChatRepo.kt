@@ -37,7 +37,7 @@ interface ChatRepo {
 
     suspend fun saveMessage(messageEntity: ChatMessageEntity): Result<Int>
     suspend fun deleteMessage(id: Int): Result<Unit>
-    suspend fun updateMessage(id: Int, msg: String? = null, status: MessageStatus? = null): Result<Unit>
+    suspend fun updateMessage(id: Int, msg: String? = null, status: MessageStatus? = null): Result<Int>
 
     suspend fun sendMessage(modelName: String, message: ChatMessage): Result<Int>
 

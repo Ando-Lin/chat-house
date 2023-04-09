@@ -67,16 +67,18 @@ class ChatLocalDataSource @Inject constructor(db: AppDataBase) : ChatDataSource 
         }
     }
 
-    override suspend fun updateMessage(id: Int, status: MessageStatus?, msg: String?, selected: Int?) {
+    override suspend fun updateMessage(id: Int, status: MessageStatus?, msg: String?, selected: Int?): Int {
+        var updateRows = 0
         status?.let {
-            chatDao.updateMessageStatus(id, it)
+            updateRows += chatDao.updateMessageStatus(id, it)
         }
         msg?.let {
-            chatDao.updateMessage(id, it)
+            updateRows += chatDao.updateMessage(id, it)
         }
         selected?.let {
-            chatDao.updateSelectedState(id, selected = it)
+            updateRows += chatDao.updateSelectedState(id, selected = it)
         }
+        return updateRows
     }
 
     override suspend fun shiftStatus(originStatus: MessageStatus, targetStatus: MessageStatus) {
