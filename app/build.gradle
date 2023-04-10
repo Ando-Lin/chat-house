@@ -28,8 +28,8 @@ android {
         applicationId "com.ando.chathouse"
         minSdk 26
         targetSdk 33
-        versionCode 4
-        versionName "0.04-alpha"
+        versionCode 5
+        versionName "0.05-alpha"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
