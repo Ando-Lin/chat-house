@@ -281,13 +281,11 @@ fun ChatArea(
         Container(0)
     }
     //TODO: 导航到最新消息的浮动按钮
-    LaunchedEffect(pagingItems.itemCount, pagingItems.loadState.refresh) {
-        //prepend：从本地库的加载状态
-        val prepended = pagingItems.loadState.prepend.endOfPaginationReached
+    LaunchedEffect(pagingItems.itemCount) {
         //新增记录则滚动到最新消息
         if (lastItemCount<pagingItems.itemCount){
             //检查是否已经装配好，是否已显示最新
-            if (prepended && lazyColumnState.firstVisibleItemIndex!=0) {
+            if (lazyColumnState.firstVisibleItemIndex!=0) {
                 lazyColumnState.animateScrollToItem(0)
             }
         }
