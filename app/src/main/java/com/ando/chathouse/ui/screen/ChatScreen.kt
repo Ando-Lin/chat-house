@@ -64,9 +64,8 @@ fun ChatScreen(
 
     LaunchedEffect(uiMessage) {
         if (uiMessage.isBlank()) return@LaunchedEffect
-        launch {
-            SnackbarUI.showMessage(uiMessage)
-        }
+        SnackbarUI.showMessage(uiMessage)
+        viewModel.resetMessage()
     }
     DisposableEffect(Unit){
         onDispose {
@@ -282,7 +281,7 @@ fun ChatArea(
         Container(0)
     }
     //TODO: 导航到最新消息的浮动按钮
-    LaunchedEffect(pagingItems.itemCount) {
+    LaunchedEffect(pagingItems.itemCount, pagingItems.loadState.refresh) {
         //prepend：从本地库的加载状态
         val prepended = pagingItems.loadState.prepend.endOfPaginationReached
         //新增记录则滚动到最新消息
@@ -293,7 +292,9 @@ fun ChatArea(
             }
         }
         //更新
-        lastItemCount = pagingItems.itemCount
+        if (lastItemCount != pagingItems.itemCount){
+            lastItemCount = pagingItems.itemCount
+        }
     }
     //上下反转的惰性列表
     LazyColumn(

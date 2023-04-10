@@ -73,9 +73,8 @@ fun RoleListScreen(
 
     LaunchedEffect(message) {
         if (message.isBlank()) return@LaunchedEffect
-        launch {
-            SnackbarUI.showMessage(message)
-        }
+        SnackbarUI.showMessage(message)
+        viewModel.resetMessage()
     }
     DisposableEffect(Unit){
         onDispose {
