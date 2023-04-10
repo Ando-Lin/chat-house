@@ -33,8 +33,7 @@ AI过家家。使用openAI的gpt3.5API作为对话模型的角色扮演聊天安
 1. 主界面右划打开侧边栏，点击⌈设置⌋进入设置页面
 
 2. 在⌈OpenAI API-Key⌋下方输入API Key，点击外部界面或者返回即可保存
-   
-   （API Key免费分享网站：[独角兽分享: 每日更新的免费ChatGPT账号,免费OpenAIkey](https://freeopenai.xyz/)）
+   （从互联网收集的API Key免费分享网站：1. [独角兽分享: 每日更新的免费ChatGPT账号,免费OpenAIkey](https://freeopenai.xyz/)）
    
    
 
