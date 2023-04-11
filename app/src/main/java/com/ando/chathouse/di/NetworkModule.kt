@@ -27,6 +27,7 @@ object NetworkModule {
                 it.proceed(newReq)
             }
             .addInterceptor { chain ->
+                //缓存寿命设置为0，让okhttp对stream不缓存直接给retrofit
                 val request = chain.request()
                     .newBuilder()
                     .cacheControl(CacheControl.Builder().maxAge(0, TimeUnit.SECONDS).build())

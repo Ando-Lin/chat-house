@@ -4,7 +4,7 @@ import com.ando.chathouse.constant.OPENAI_MIRROR_URL
 import com.ando.chathouse.constant.OPENAI_URL
 import com.ando.chathouse.model.*
 import com.ando.chathouse.model.impl.ChatModelMangerImpl
-import com.ando.chathouse.model.impl.StreamOpenAIGPT3d5Model
+import com.ando.chathouse.model.impl.OpenAIGPT3d5Model
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -18,17 +18,35 @@ object ChatModelModule {
     @Provides
     fun provideChatMangerImpl(okHttpClient: OkHttpClient): ChatModelMangerImpl {
         return ChatModelMangerImpl().apply {
-//            addModel("openAI GPT3.5", lazy { OpenAIGPT3d5Model.create(OPENAI_URL, httpClient = okHttpClient) })
-//            addModel("openAI GPT3.5 mirror", lazy { OpenAIGPT3d5Model.create(OPENAI_MIRROR_URL, httpClient = okHttpClient) })
-            addModel("openAI GPT3.5", lazy { StreamOpenAIGPT3d5Model.create(OPENAI_URL, httpClient = okHttpClient) })
-            addModel("openAI GPT3.5镜像", lazy { StreamOpenAIGPT3d5Model.create(OPENAI_MIRROR_URL, httpClient = okHttpClient) })
+            addModel(
+                "openAI GPT3.5",
+                lazy {
+                    OpenAIGPT3d5Model(
+                        baseUrl = OPENAI_URL,
+                        httpClient = okHttpClient,
+                        needAPIKey = true,
+                        stream = true
+                    )
+                }
+            )
+            addModel(
+                "openAI GPT3.5镜像",
+                lazy {
+                    OpenAIGPT3d5Model(
+                        baseUrl = OPENAI_MIRROR_URL,
+                        httpClient = okHttpClient,
+                        needAPIKey = true,
+                        stream = true
+                    )
+                }
+            )
         }
     }
 }
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class ChatMangerModule{
+abstract class ChatMangerModule {
     @Binds
-    abstract fun bindChatMangerModule(chatModelMangerImpl: ChatModelMangerImpl):ChatModelManger
+    abstract fun bindChatMangerModule(chatModelMangerImpl: ChatModelMangerImpl): ChatModelManger
 }

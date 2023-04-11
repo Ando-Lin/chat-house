@@ -351,6 +351,7 @@ class ChatRepoImpl @Inject constructor(
                     if (sendSuccessful) {
                         throw MessageStreamInterruptException(e)
                     } else {
+                        Log.i(TAG, "continueSendMessage: ", e)
                         throw e
                     }
                 }

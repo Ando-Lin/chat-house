@@ -10,49 +10,28 @@ import retrofit2.http.*
 interface OpenAIApi {
 
 
-    /**
-     * @param authorization: 认证
-     * @param para: 参数
-     */
-    @POST("/v1/chat/completions")
-    suspend fun queryChatGPT(
-        @Header("Authorization") authorization: Authorization?=null,
-        @Body para: ChatGPTCompletionPara
-    ): Response<ChatGPTCompletionResponse>
 
     /**
-     * @param authorization: 认证
-     * @param para: 参数
-     */
-    @Streaming
-    @POST("/v1/chat/completions")
-    suspend fun streamChatGPT(
-        @Header("Authorization") authorization: Authorization?=null,
-        @Body para: ChatGPTCompletionPara
-    ): Response<ResponseBody>
-
-
-    /**
-     * @param url: 完整url
+     * @param url: url
      * @param authorization: 认证
      * @param para: 参数
      */
     @Streaming
     @POST
-    suspend fun streamChatGPTNotStandard(
+    suspend fun streamChatGPT(
         @Url url:String,
         @Header("Authorization") authorization: Authorization?=null,
         @Body para: ChatGPTCompletionPara
     ): Response<ResponseBody>
 
     /**
-     * @param url: 完整url
+     * @param url: url
      * @param authorization: 认证
      * @param para: 参数
      */
     @POST
     @Headers(value = ["Accept: application/json", "Content-Type: application/json"])
-    suspend fun queryChatGPTNotStandard(
+    suspend fun queryChatGPT(
         @Url url:String,
         @Header("Authorization") authorization: Authorization?=null,
         @Body para: ChatGPTCompletionPara
