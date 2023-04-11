@@ -82,3 +82,81 @@ AI过家家。使用openAI的gpt3.5API作为对话模型的角色扮演聊天安
 - 提醒模式：打开后将在发送信息的末尾添加一条System指令信息。
   
   <img src="./img/S30407-16010339.png" title="" alt="S30407-16010339" style="zoom:50%;">
+
+
+
+#### 使用自己的模型
+
+###### 添加OpenAI镜像站
+
+在`com.ando.chathouse.di.ChatModelModule`类的添加OpenAIGPT3d5Model。事实上并非只能添加镜像站，只要服务端兼容openAI的chat completions的api参数且响应一致就行。
+
+```kotlin
+fun provideChatMangerImpl(okHttpClient: OkHttpClient): ChatModelMangerImpl {
+        return ChatModelMangerImpl().apply {
+            addModel(
+                "openAI GPT3.5",
+                lazy {
+                    OpenAIGPT3d5Model(
+                        baseUrl = OPENAI_URL,
+                        httpClient = okHttpClient,
+                        needAPIKey = true,
+                        stream = true
+                    )
+                }
+            )
+            addModel(
+                TODO("填写显示的名称"),
+                lazy {
+                    OpenAIGPT3d5Model(
+                        baseUrl = TODO("填写镜像网站的Host"),
+                        urlPath = TODO("填写调用api的路径"),
+                        httpClient = okHttpClient,
+                        needAPIKey = TODO("是否需要OpenAI的api key"),
+                        stream = TODO("是否以流式接收（长文本的响应速度更快）")
+                    )
+                }
+            )
+        }
+    }
+```
+
+###### 添加自定义模型
+
+对于其他AI模型可以通过实现LongChatModel接口来添加模型（目前参数para没有parentMessageId这样的标识属性，只能将上下文全部发送给服务器）
+
+```kotlin
+class MyLongChatModel : LongChatModel {
+    override val label: String = TODO("自定义标签。如果使用OpenAIGPT3d5Model.LABEL，则可以从para接收OpenAI的api key。目前还不能设置其他api key")
+    fun sendMessages(messages: List<RoleMessage>, para: ChatModel.Para?=null): Flow<String?>{
+        TODO("实现")
+    }            
+}
+```
+
+实现完成后仿照添加镜像模型的方法，在`com.ando.chathouse.di.ChatModelModule`添加模型
+
+```kotlin
+fun provideChatMangerImpl(okHttpClient: OkHttpClient): ChatModelMangerImpl {
+        return ChatModelMangerImpl().apply {
+            addModel(
+                "openAI GPT3.5",
+                lazy {
+                    OpenAIGPT3d5Model(
+                        baseUrl = OPENAI_URL,
+                        httpClient = okHttpClient,
+                        needAPIKey = true,
+                        stream = true
+                    )
+                }
+            )
+            addModel(
+                TODO("填写显示的名称"),
+                lazy {
+                    //添加自定义模型
+                    MyLongChatModel()
+                }
+            )
+        }
+    }
+```
