@@ -109,8 +109,8 @@ fun provideChatMangerImpl(okHttpClient: OkHttpClient): ChatModelMangerImpl {
                 TODO("填写显示的名称"),
                 lazy {
                     OpenAIGPT3d5Model(
-                        baseUrl = TODO("填写镜像网站的Host"),
-                        urlPath = TODO("填写调用api的路径"),
+                        baseUrl = TODO("填写镜像站的base url"),
+                        urlPath = TODO("填写调用api的路径，不填写则默认为/v1/chat/completions"),
                         httpClient = okHttpClient,
                         needAPIKey = TODO("是否需要OpenAI的api key"),
                         stream = TODO("是否以流式接收（长文本的响应速度更快）")
