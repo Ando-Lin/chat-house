@@ -219,7 +219,7 @@ class ChatRepoImpl @Inject constructor(
                 } catch (e: HttpException) {
                     updateMessage(id = messageId, status = MessageStatus.Failed)
                     Log.e(TAG, "sendMessage: 网络异常", e)
-                    throw HttpRequestException(e)
+                    throw HttpRequestException(e.code())
                 } catch (e: Exception) {
                     updateMessage(id = messageId, status = MessageStatus.Failed)
                     Log.e(TAG, "sendMessage: 发送异常", e)
